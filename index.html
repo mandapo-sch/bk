@@ -1,0 +1,2800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>BK Mandapo · Login dengan Google</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,1" />
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        html {
+            scroll-behavior: smooth;
+            height: 100%;
+            font-size: 16px;
+        }
+        body {
+            background: #d4e8e5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+      
+        /* ===== LOGIN PAGE ===== */
+        .login-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #d4e8e5;
+            padding: 1rem;
+        }
+      
+        .login-card {
+            background: white;
+            border-radius: 3rem;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 70, 60, 0.15);
+            text-align: center;
+            border: 1px solid #e0f2ef;
+        }
+      
+        .login-logo {
+            margin-bottom: 2.5rem;
+        }
+      
+        .login-logo .logo-icon {
+            background: #009688;
+            width: 70px;
+            height: 70px;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.25rem;
+            transform: rotate(5deg);
+            margin: 0 auto 1.25rem auto;
+        }
+      
+        .login-logo h1 {
+            font-size: clamp(2rem, 8vw, 3rem);
+            font-weight: 700;
+            color: #1e3a3a;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.625rem;
+        }
+      
+        .login-logo h1 span {
+            color: #009688;
+            font-weight: 800;
+        }
+      
+        .login-logo p {
+            color: #597d7a;
+            font-size: clamp(1rem, 4vw, 1.125rem);
+        }
+      
+        .login-subtitle {
+            font-size: clamp(1.25rem, 5vw, 1.5rem);
+            font-weight: 600;
+            color: #153b3b;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 2px solid #e0f2ef;
+        }
+      
+        .login-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+      
+        .login-option {
+            background: #f9fdfe;
+            border: 2px solid #e2f0ec;
+            border-radius: 2.5rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.9375rem;
+        }
+      
+        .login-option:hover {
+            border-color: #009688;
+            background: #f0fbf9;
+            box-shadow: 0 10px 20px rgba(0, 150, 136, 0.15);
+        }
+      
+        .option-icon {
+            background: #009688;
+            width: 5rem;
+            height: 5rem;
+            border-radius: 1.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+        }
+      
+        .option-content h3 {
+            font-size: clamp(1.25rem, 5vw, 1.75rem);
+            font-weight: 700;
+            color: #153b3b;
+        }
+
+        /* Google Sign In Button */
+        .google-login-container {
+            margin-top: 1.5rem;
+            border-top: 1px solid #e0f2ef;
+            padding-top: 1.5rem;
+        }
+        
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: white;
+            border: 2px solid #e2f0ec;
+            border-radius: 2.5rem;
+            padding: 0.875rem 1.5rem;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #5f6368;
+        }
+        
+        .google-btn:hover {
+            border-color: #009688;
+            background: #f0fbf9;
+            box-shadow: 0 4px 12px rgba(0, 150, 136, 0.15);
+        }
+        
+        .google-btn img {
+            width: 24px;
+            height: 24px;
+        }
+      
+        .back-button {
+            position: absolute;
+            top: 1.875rem;
+            left: 1.875rem;
+            background: white;
+            width: 3.125rem;
+            height: 3.125rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: background 0.2s;
+            border: 1px solid #e0f2ef;
+            z-index: 10;
+        }
+        .back-button:hover {
+            background: #f0fbf9;
+            border-color: #009688;
+        }
+        .back-button i {
+            color: #009688;
+            font-size: 1.5rem;
+        }
+      
+        /* ===== NAVBAR ===== */
+        .navbar-container {
+            width: 100%;
+            max-width: 1280px;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-bottom-left-radius: 2.5rem;
+            border-bottom-right-radius: 2.5rem;
+            margin-top: 0;
+        }
+      
+        .navbar-wrapper {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+      
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            background: white;
+            flex-wrap: wrap;
+            border-bottom-left-radius: 2.5rem;
+            border-bottom-right-radius: 2.5rem;
+        }
+      
+        .top-nav.hidden {
+            display: none;
+        }
+      
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+      
+        .logo-icon {
+            background: #009688;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            transform: rotate(5deg);
+        }
+      
+        .logo-text {
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
+            font-weight: 700;
+            color: #1e3a3a;
+            letter-spacing: -0.5px;
+        }
+      
+        .logo-text span {
+            color: #009688;
+            font-weight: 800;
+        }
+      
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem 1rem;
+            background: transparent;
+            padding: 0.5rem 1rem 0.5rem 0.75rem;
+            border-radius: 2.5rem;
+            position: relative;
+            flex-wrap: wrap;
+        }
+      
+        .avatar {
+            background: #009688;
+            width: 2.625rem;
+            height: 2.625rem;
+            border-radius: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.375rem;
+            pointer-events: none;
+        }
+      
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+      
+        .user-name {
+            font-weight: 600;
+            color: #0a2e2b;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+      
+        .user-role {
+            font-size: 0.75rem;
+            color: #009688;
+        }
+        
+        .user-email {
+            font-size: 0.7rem;
+            color: #597d7a;
+            margin-top: 0.125rem;
+        }
+      
+        .profile-left-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: -0.5rem;
+            margin-right: 0.125rem;
+            cursor: pointer;
+        }
+      
+        .profile-left-icon.siswa-hidden {
+            display: none;
+        }
+      
+        .material-symbols-outlined {
+            font-size: 1.75rem;
+            color: #009688;
+            background: white;
+            border-radius: 50%;
+            padding: 0.25rem;
+            transition: background 0.2s;
+        }
+      
+        .material-symbols-outlined:hover { background: #e0f2ef; }
+      
+        .logout-icon {
+            font-size: 1.5rem;
+            color: #009688;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.2s;
+            margin-left: 0.3125rem;
+        }
+      
+        .logout-icon:hover {
+            background: #e0f2ef;
+            color: #00796b;
+        }
+      
+        .add-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            background: white;
+            border-radius: 2.5rem;
+            border: 1px solid #d0e8e2;
+            padding: 0.5rem 0;
+            min-width: 200px;
+            box-shadow: 0 6px 16px rgba(0, 60, 50, 0.1);
+            z-index: 100;
+            display: none;
+            overflow: hidden;
+        }
+      
+        .add-menu.show { display: block; }
+      
+        .add-menu-item {
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            color: #1e3b47;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            white-space: nowrap;
+        }
+      
+        .add-menu-item:hover {
+            background: #f0fbf9;
+            color: #009688;
+        }
+      
+        .add-menu-item i { width: 1.25rem; color: #009688; }
+      
+        .add-menu-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            width: 1.25rem;
+            color: #009688;
+        }
+      
+        /* ===== MAIN CONTENT ===== */
+        .main-wrapper {
+            max-width: 1280px;
+            width: 100%;
+            margin: 1.25rem auto;
+            background: white;
+            border-radius: 2.5rem;
+            overflow: hidden;
+            border-left: 1px solid rgba(0, 150, 136, 0.15);
+            border-right: 1px solid rgba(0, 150, 136, 0.15);
+            flex: 1 0 auto;
+            display: none;
+        }
+      
+        .main-wrapper.show {
+            display: block;
+        }
+      
+        .main-content {
+            padding: 2rem 2rem 1.5rem;
+            background: #f9fdfe;
+            min-height: 70vh;
+        }
+      
+        .home-section { display: block; }
+        .home-section.hidden { display: none; }
+        .notes-page, .detail-page, .artikel-page, .chat-page, .janjian-page, .semua-janjian-page {
+            display: none;
+            animation: fadeIn 0.2s ease;
+            min-height: 500px;
+        }
+        .notes-page.show, .detail-page.show, .artikel-page.show, .chat-page.show, .janjian-page.show, .semua-janjian-page.show { display: block; }
+      
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      
+        .detail-container, .notes-container, .artikel-container, .chat-container, .janjian-container, .semua-janjian-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 2.5rem;
+            padding: 2.5rem;
+            border: 1px solid #e2f0ec;
+            box-shadow: 0 8px 20px rgba(0, 70, 60, 0.05);
+        }
+      
+        .detail-header, .notes-header, .artikel-header, .chat-header, .janjian-header, .semua-janjian-header {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 2rem;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+      
+        .back-button-detail, .back-button, .back-button-artikel, .back-button-chat, .back-button-janjian, .back-button-semua-janjian {
+            background: #f0fbf9;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #009688;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+      
+        .back-button-detail:hover, .back-button:hover, .back-button-artikel:hover, .back-button-chat:hover, .back-button-janjian:hover, .back-button-semua-janjian:hover {
+            background: #d7f0e8;
+        }
+      
+        .chat-toggle-sidebar {
+            background: #f0fbf9;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.75rem 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #009688;
+        }
+        .chat-toggle-sidebar:hover {
+            background: #d7f0e8;
+        }
+        .chat-toggle-sidebar .material-symbols-outlined {
+            font-size: 1.5rem;
+            background: transparent;
+            color: #009688;
+        }
+      
+        .article-grid, .artikel-grid-full {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            min-height: 100px;
+        }
+      
+        .artikel-page h2, .semua-janjian-page h2 {
+            font-size: clamp(1.5rem, 5vw, 1.75rem);
+            font-weight: 700;
+            color: #153b3b;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.625rem;
+            border-bottom: 2px solid #e0f2ef;
+        }
+      
+        .article-card {
+            background: white;
+            border-radius: 1.625rem;
+            padding: 1.125rem;
+            border: 1px solid #def0ea;
+            transition: 0.1s;
+            cursor: pointer;
+            position: relative;
+        }
+      
+        .article-card:hover {
+            background: #f3fcf9;
+        }
+      
+        .art-icon {
+            background: #d6f0ea;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 1.125rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00766b;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+      
+        .article-card h4 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1f4b44;
+            margin-bottom: 0.25rem;
+            padding-right: 1.5rem;
+        }
+      
+        .article-card p {
+            font-size: 0.8125rem;
+            color: #618b83;
+        }
+      
+        .card-menu-icon {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            color: #86a8a0;
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem;
+            border-radius: 50%;
+            z-index: 10;
+        }
+      
+        .card-popup-menu {
+            position: absolute;
+            top: 2.5rem;
+            right: 0.625rem;
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #d0e8e2;
+            box-shadow: 0 8px 20px rgba(0, 60, 50, 0.15);
+            z-index: 20;
+            min-width: 140px;
+            display: none;
+            overflow: hidden;
+        }
+      
+        .card-popup-menu.show { display: block; }
+      
+        .popup-item {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9375rem;
+            color: #1e3b47;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+      
+        .popup-item:hover {
+            background: #f0fbf9;
+            color: #009688;
+        }
+      
+        .janjian-list, .semua-janjian-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.125rem;
+            margin-top: 1.25rem;
+        }
+      
+        .jadwal-row {
+            background: white;
+            border-radius: 1.625rem;
+            padding: 1.125rem;
+            border: 1px solid #def0ea;
+            display: flex;
+            align-items: center;
+            gap: 1.125rem;
+            position: relative;
+            flex-wrap: wrap;
+        }
+      
+        .jadwal-icon {
+            background: #c5e6e0;
+            width: 3.625rem;
+            height: 3.625rem;
+            border-radius: 1.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #00635a;
+        }
+      
+        .jadwal-icon .material-symbols-outlined {
+            font-size: 2rem;
+            background: transparent;
+            color: #00635a;
+            padding: 0;
+        }
+      
+        .jadwal-details {
+            text-align: left;
+            flex: 1;
+            min-width: 200px;
+        }
+      
+        .jadwal-details h4 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #16453f;
+            margin-bottom: 0.25rem;
+        }
+      
+        .jadwal-details p {
+            font-size: 0.875rem;
+            color: #537c75;
+            margin-top: 0.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+      
+        .jadwal-details p span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+      
+        .jadwal-details p i {
+            width: 1.125rem;
+            color: #009688;
+        }
+      
+        .jadwal-menu-icon {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            color: #86a8a0;
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem;
+            border-radius: 50%;
+            z-index: 10;
+        }
+      
+        .jadwal-popup-menu {
+            position: absolute;
+            top: 2.5rem;
+            right: 0.625rem;
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #d0e8e2;
+            box-shadow: 0 8px 20px rgba(0, 60, 50, 0.15);
+            z-index: 20;
+            min-width: 140px;
+            display: none;
+            overflow: hidden;
+        }
+      
+        .jadwal-popup-menu.show { display: block; }
+      
+        .jadwal-popup-item {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9375rem;
+            color: #1e3b47;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+      
+        .jadwal-popup-item:hover {
+            background: #f0fbf9;
+            color: #009688;
+        }
+      
+        .janjian-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+      
+        .janjian-editor .janjian-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 1.25rem;
+        }
+      
+        .janjian-editor .janjian-icon .material-symbols-outlined {
+            font-size: 5rem;
+            background: #e0f2ef;
+            border-radius: 50%;
+            padding: 1.25rem;
+            color: #009688;
+        }
+      
+        .jadwal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+        }
+      
+        .jadwal-field label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #009688;
+            letter-spacing: 0.5px;
+        }
+      
+        .jadwal-field input[type="date"],
+        .jadwal-field input[type="time"],
+        .jadwal-field input[type="text"] {
+            padding: 1rem 1.25rem;
+            border: 2px solid #e2f0ec;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            background: #f9fdfe;
+            width: 100%;
+            transition: border 0.2s;
+        }
+      
+        .jadwal-field input:focus {
+            outline: none;
+            border-color: #009688;
+            background: white;
+        }
+      
+        .save-button-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+      
+        .save-button {
+            background: #009688;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 150, 136, 0.3);
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+      
+        .save-button:hover { background: #00796b; }
+      
+        .notes-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+      
+        .note-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+      
+        .note-icon .material-symbols-outlined {
+            font-size: 5rem;
+            background: #e0f2ef;
+            border-radius: 50%;
+            padding: 1.25rem;
+            color: #009688;
+        }
+      
+        .note-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+        }
+      
+        .note-field label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #009688;
+            letter-spacing: 0.5px;
+        }
+      
+        .note-field input,
+        .note-field textarea {
+            padding: 1rem 1.25rem;
+            border: 2px solid #e2f0ec;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            background: #f9fdfe;
+            width: 100%;
+            transition: border 0.2s;
+        }
+      
+        .note-field input:focus,
+        .note-field textarea:focus {
+            outline: none;
+            border-color: #009688;
+            background: white;
+        }
+      
+        .note-field textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+      
+        .send-button-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+      
+        .send-button {
+            background: #009688;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 150, 136, 0.3);
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+      
+        .send-button:hover { background: #00796b; }
+      
+        .detail-title {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 700;
+            color: #004d40;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+      
+        .detail-paragraph {
+            font-size: clamp(1rem, 4vw, 1.125rem);
+            line-height: 1.6;
+            color: #1e3b47;
+            white-space: pre-wrap;
+        }
+      
+        .chat-content {
+            display: flex;
+            height: 600px;
+            max-height: 70vh;
+            border: 1px solid #e0f2ef;
+            border-radius: 1.875rem;
+            overflow: hidden;
+            flex-direction: row;
+        }
+      
+        .chat-sidebar {
+            width: 300px;
+            background: #f9fdfe;
+            border-right: 1px solid #e0f2ef;
+            display: flex;
+            flex-direction: column;
+        }
+      
+        .chat-sidebar.hidden {
+            display: none;
+        }
+      
+        .chat-search {
+            padding: 0.9375rem;
+            border-bottom: 1px solid #e0f2ef;
+        }
+      
+        .chat-search input {
+            width: 100%;
+            padding: 0.625rem 0.9375rem;
+            border: 2px solid #e2f0ec;
+            border-radius: 2.5rem;
+            font-size: 0.875rem;
+            background: white;
+        }
+      
+        .chat-search input:focus {
+            outline: none;
+            border-color: #009688;
+        }
+      
+        .chat-contacts {
+            flex: 1;
+            overflow-y: auto;
+        }
+      
+        .chat-contact {
+            display: flex;
+            align-items: center;
+            padding: 0.9375rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #e0f2ef;
+        }
+      
+        .chat-contact:hover {
+            background: #e0f2ef;
+        }
+      
+        .chat-contact.active {
+            background: #d0e8e2;
+        }
+      
+        .contact-avatar {
+            width: 3.125rem;
+            height: 3.125rem;
+            border-radius: 1.5625rem;
+            background: #009688;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+      
+        .contact-info {
+            flex: 1;
+            min-width: 0;
+        }
+      
+        .contact-name {
+            font-weight: 600;
+            color: #0a2e2b;
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+      
+        .contact-email {
+            font-size: 0.7rem;
+            color: #009688;
+            margin-top: 0.125rem;
+        }
+      
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+      
+        .chat-messages {
+            flex: 1;
+            padding: 1.25rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9375rem;
+            position: relative;
+        }
+      
+        .message-wrapper {
+            position: relative;
+            max-width: 70%;
+            align-self: flex-start;
+            margin-bottom: 0.5rem;
+        }
+      
+        .message-wrapper.sent {
+            align-self: flex-end;
+        }
+      
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            word-wrap: break-word;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+      
+        .message-wrapper:hover .message {
+            background-color: #e8f5f2;
+        }
+      
+        .message-wrapper.sent:hover .message {
+            background-color: #008b7d;
+        }
+      
+        .message.received {
+            background: #f0fbf9;
+            border-bottom-left-radius: 0.3125rem;
+        }
+      
+        .message.sent {
+            background: #009688;
+            color: white;
+            border-bottom-right-radius: 0.3125rem;
+        }
+      
+        .message-time {
+            font-size: 0.6875rem;
+            margin-top: 0.25rem;
+            text-align: right;
+            opacity: 0.7;
+        }
+      
+        .message-menu-dots {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            cursor: pointer;
+            font-size: 1.125rem;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+      
+        .message-wrapper:not(.sent) .message-menu-dots {
+            color: #000000;
+            background: #f0fbf9;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+      
+        .message-wrapper.sent .message-menu-dots {
+            color: #ffffff;
+            background: #009688;
+        }
+      
+        .message-wrapper:hover .message-menu-dots {
+            opacity: 1;
+        }
+      
+        .message-popup-menu {
+            position: absolute;
+            top: 1.75rem;
+            right: 0.5rem;
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            min-width: 150px;
+            display: none;
+            overflow: hidden;
+        }
+      
+        .message-popup-menu.show {
+            display: block;
+        }
+      
+        .message-popup-item {
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+      
+        .message-popup-item:hover {
+            background: #f5f5f5;
+            color: #009688;
+        }
+      
+        .message-popup-item i {
+            width: 1.25rem;
+            color: #009688;
+            font-size: 1rem;
+        }
+      
+        .message-popup-item.delete:hover {
+            color: #dc3545;
+        }
+      
+        .message-popup-item.delete:hover i {
+            color: #dc3545;
+        }
+      
+        .chat-input-area {
+            display: flex;
+            padding: 0.9375rem;
+            border-top: 1px solid #e0f2ef;
+            background: white;
+        }
+      
+        .chat-input-area input {
+            flex: 1;
+            padding: 0.75rem 1.125rem;
+            border: 2px solid #e2f0ec;
+            border-radius: 2.5rem;
+            font-size: 0.875rem;
+            margin-right: 0.625rem;
+        }
+      
+        .chat-input-area input:focus {
+            outline: none;
+            border-color: #009688;
+        }
+      
+        .chat-input-area button {
+            width: 3.125rem;
+            height: 3.125rem;
+            border-radius: 1.5625rem;
+            background: #009688;
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+      
+        .chat-input-area button:hover {
+            background: #00796b;
+        }
+      
+        .empty-chat-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #86a8a0;
+            text-align: center;
+            padding: 2rem;
+        }
+      
+        .empty-chat-message i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #a0c8c0;
+        }
+      
+        .empty-chat-message p {
+            font-size: 1rem;
+        }
+      
+        .footer-container {
+            width: 100%;
+            max-width: 1280px;
+            background: #004d40;
+            border-top-left-radius: 2.5rem;
+            border-top-right-radius: 2.5rem;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 0;
+            flex-shrink: 0;
+            display: none;
+        }
+      
+        .footer-container.show {
+            display: block;
+        }
+      
+        .bottom-utility {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem 0;
+            color: white;
+        }
+      
+        .bottom-utility.hidden {
+            display: none;
+        }
+      
+        .copyright {
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+        }
+      
+        .services-section {
+            margin-bottom: 2.75rem;
+        }
+      
+        .services-section h2 {
+            font-size: clamp(1.2rem, 5vw, 1.375rem);
+            font-weight: 700;
+            color: #153b3b;
+            margin-bottom: 1.25rem;
+        }
+      
+        .services-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+        }
+      
+        .service-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+      
+        .service-icon {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 1.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #009688;
+            font-size: 1.875rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            transition: background 0.2s;
+        }
+      
+        .service-item:hover .service-icon {
+            background: #e0f2ef;
+        }
+      
+        .service-label {
+            font-weight: 600;
+            color: #1d423d;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+      
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+      
+        .panel-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #153b3b;
+        }
+      
+        .panel-header a {
+            text-decoration: none;
+            font-weight: 600;
+            color: #009688;
+            font-size: 0.9375rem;
+            cursor: pointer;
+        }
+      
+        .empty-article-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2.5rem 1.25rem;
+            color: #86a8a0;
+            font-size: 1rem;
+        }
+      
+        .empty-article-message i {
+            font-size: 3rem;
+            color: #a0c8c0;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+      
+        .firefox-hint {
+            color: #009688;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        .firefox-hint.show {
+            display: block;
+        }
+      
+        .sync-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #009688;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 150, 136, 0.3);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .sync-indicator i {
+            font-size: 1rem;
+        }
+        
+        .sync-indicator.fade-out {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+      
+        @media screen and (max-width: 768px) {
+            .main-content {
+                padding: 1.5rem 1rem;
+            }
+            .detail-container, .notes-container, .artikel-container, .chat-container, .janjian-container, .semua-janjian-container {
+                padding: 1.5rem;
+            }
+            .article-grid, .artikel-grid-full {
+                grid-template-columns: 1fr;
+            }
+            .chat-content {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+                position: relative;
+            }
+            .chat-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e0f2ef;
+                max-height: 300px;
+            }
+            .chat-sidebar:not(.hidden) {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: white;
+                z-index: 20;
+                box-shadow: 0 0 20px rgba(0,0,0,0.2);
+                max-height: none;
+            }
+            .chat-main {
+                height: 400px;
+            }
+            .jadwal-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .jadwal-icon {
+                margin-bottom: 0.5rem;
+            }
+            .user-info {
+                display: none;
+            }
+            .login-card {
+                padding: 2rem 1.5rem;
+            }
+            .back-button {
+                top: 1rem;
+                left: 1rem;
+                width: 2.5rem;
+                height: 2.5rem;
+            }
+        }
+      
+        @media screen and (max-width: 480px) {
+            .login-option {
+                padding: 1rem;
+            }
+            .option-icon {
+                width: 4rem;
+                height: 4rem;
+                font-size: 2rem;
+            }
+            .chat-messages {
+                padding: 0.75rem;
+            }
+            .message {
+                max-width: 85%;
+            }
+            .message-wrapper {
+                max-width: 85%;
+            }
+        }
+      
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .article-grid, .artikel-grid-full {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== LOGIN PAGE ===== -->
+    <div id="loginPage" class="login-container" style="display: flex;">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h1><span>BK</span> Mandapo</h1>
+                <p>Sistem Bimbingan Konseling</p>
+            </div>
+            <div class="login-subtitle">Login dengan Akun Google</div>
+            <div class="login-options">
+                <div class="login-option" id="loginGuru">
+                    <div class="option-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <div class="option-content"><h3>Guru BK</h3></div>
+                </div>
+                <div class="login-option" id="loginSiswa">
+                    <div class="option-icon"><i class="fas fa-user-graduate"></i></div>
+                    <div class="option-content"><h3>Siswa</h3></div>
+                </div>
+            </div>
+            <div class="google-login-container">
+                <div class="google-btn" id="googleSignInBtn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    <span>Login dengan Google</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NAVBAR ===== -->
+    <div class="navbar-container" id="navbarContainer" style="display: none;">
+        <div class="navbar-wrapper">
+            <div class="top-nav" id="topNav">
+                <div class="logo-area">
+                    <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="logo-text"><span>BK</span> Mandapo</div>
+                </div>
+                <div class="user-profile" id="userProfile">
+                    <span class="material-symbols-outlined profile-left-icon" id="addBoxIcon">add_box</span>
+                    <div class="add-menu" id="addMenu">
+                        <div class="add-menu-item" id="menuArtikel"><i class="fas fa-newspaper"></i> Artikel</div>
+                        <div class="add-menu-item" id="menuJanjian"><span class="material-symbols-outlined">calendar_month</span> Jadwal Temu</div>
+                    </div>
+                    <div class="avatar" id="avatar"><i class="fas fa-user-graduate"></i></div>
+                    <div class="user-info">
+                        <div class="user-name" id="userNameDisplay">Nama Pengguna</div>
+                        <div class="user-role" id="userRole"></div>
+                        <div class="user-email" id="userEmailDisplay"></div>
+                    </div>
+                    <i class="fas fa-sign-out-alt logout-icon" id="logoutIcon" title="Logout"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="main-wrapper" id="mainWrapper">
+        <div class="main-content" id="mainContent">
+            <!-- Halaman Beranda -->
+            <div id="homeSections" class="home-section">
+                <section id="chat" data-section="chat">
+                    <div class="services-section">
+                        <h2>Layanan Cepat</h2>
+                        <div class="services-grid">
+                            <div class="service-item" data-service="chat">
+                                <div class="service-icon"><i class="fas fa-comments"></i></div>
+                                <span class="service-label">Chat</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section id="artikel" data-section="artikel">
+                    <div style="margin-bottom: 40px;">
+                        <div class="panel-header">
+                            <h3>Artikel</h3>
+                            <a id="moreArticles">Lihat semua <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                        <div class="article-grid" id="articleGrid"></div>
+                    </div>
+                </section>
+                <section id="janjian" data-section="janjian">
+                    <div>
+                        <div class="panel-header">
+                            <h3>Jadwal Temu</h3>
+                            <a id="janjianLink">Lihat semua <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                        <div class="janjian-list" id="janjianList"></div>
+                    </div>
+                </section>
+            </div>
+            <!-- Halaman Artikel -->
+            <div id="artikelPage" class="artikel-page">
+                <div class="artikel-container">
+                    <div class="artikel-header">
+                        <button class="back-button-artikel" id="backFromArtikel"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    </div>
+                    <h2>Artikel</h2>
+                    <div class="artikel-grid-full" id="artikelGridFull"></div>
+                </div>
+            </div>
+            <!-- Halaman Semua Jadwal Temu -->
+            <div id="semuaJanjianPage" class="semua-janjian-page">
+                <div class="semua-janjian-container">
+                    <div class="semua-janjian-header">
+                        <button class="back-button-semua-janjian" id="backFromSemuaJanjian"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    </div>
+                    <h2>Jadwal Temu</h2>
+                    <div class="semua-janjian-list" id="semuaJanjianList"></div>
+                </div>
+            </div>
+            <!-- Halaman Notes -->
+            <div id="notesPage" class="notes-page">
+                <div class="notes-container">
+                    <div class="notes-header">
+                        <button class="back-button" id="backToHome"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    </div>
+                    <div class="notes-editor">
+                        <div class="note-icon"><span class="material-symbols-outlined">edit_note</span></div>
+                        <div class="note-field">
+                            <label for="noteTitle">Judul</label>
+                            <input type="text" id="noteTitle" placeholder="Tulis judul di sini...">
+                        </div>
+                        <div class="note-field">
+                            <label for="noteContent">Isi Catatan</label>
+                            <textarea id="noteContent" placeholder="Tulis catatan Anda di sini..."></textarea>
+                        </div>
+                        <div class="send-button-container">
+                            <button class="send-button" id="sendArticleBtn"><i class="fas fa-paper-plane"></i> Kirim</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Halaman Jadwal Temu (Editor) -->
+            <div id="janjianPage" class="janjian-page">
+                <div class="janjian-container">
+                    <div class="janjian-header">
+                        <button class="back-button-janjian" id="backFromJanjian"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    </div>
+                    <div class="janjian-editor">
+                        <div class="janjian-icon">
+                            <span class="material-symbols-outlined">calendar_month</span>
+                        </div>
+                        <div class="jadwal-field">
+                            <label for="janjianUsername">Nama Siswa</label>
+                            <input type="text" id="janjianUsername" placeholder="Masukkan nama siswa">
+                        </div>
+                        <div class="jadwal-field">
+                            <label for="janjianDate">Tanggal</label>
+                            <input type="date" id="janjianDate">
+                            <small class="firefox-hint">Klik ikon kalender untuk memilih tanggal</small>
+                        </div>
+                        <div class="jadwal-field">
+                            <label for="janjianStartTime">Jam Mulai</label>
+                            <input type="time" id="janjianStartTime">
+                            <small class="firefox-hint">Klik ikon jam untuk memilih waktu</small>
+                        </div>
+                        <div class="jadwal-field">
+                            <label for="janjianEndTime">Jam Selesai</label>
+                            <input type="time" id="janjianEndTime">
+                            <small class="firefox-hint">Klik ikon jam untuk memilih waktu</small>
+                        </div>
+                        <div class="save-button-container">
+                            <button class="save-button" id="saveJanjianBtn"><i class="fas fa-save"></i> Simpan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Halaman Detail -->
+            <div id="detailPage" class="detail-page">
+                <div class="detail-container">
+                    <div class="detail-header">
+                        <button class="back-button-detail" id="backFromDetail"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-title" id="detailTitle">Judul Artikel</div>
+                        <div class="detail-paragraph" id="detailParagraph">Isi artikel akan tampil di sini.</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Halaman Chat -->
+            <div id="chatPage" class="chat-page">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <button class="back-button-chat" id="backFromChat"><i class="fas fa-arrow-left"></i> Kembali</button>
+                        <button class="chat-toggle-sidebar" id="toggleChatSidebar" title="Tampilkan/sembunyikan daftar kontak">
+                            <span class="material-symbols-outlined">menu</span>
+                        </button>
+                    </div>
+                    <div class="chat-content">
+                        <div class="chat-sidebar" id="chatSidebar">
+                            <div class="chat-search">
+                                <input type="text" id="chatSearch" placeholder="Cari kontak...">
+                            </div>
+                            <div class="chat-contacts" id="chatContacts"></div>
+                        </div>
+                        <div class="chat-main">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="empty-chat-message">
+                                    <i class="fas fa-comments"></i>
+                                    <p>Pilih kontak untuk memulai percakapan</p>
+                                </div>
+                            </div>
+                            <div class="chat-input-area" style="display: none;" id="chatInputArea">
+                                <input type="text" id="chatInput" placeholder="Ketik pesan...">
+                                <button id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <div class="footer-container" id="footerContainer">
+        <div class="footer-wrapper">
+            <div class="bottom-utility" id="bottomUtility">
+                <div class="copyright">&copy; BK Mandapo</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ===== FIREBASE CONFIGURATION =====
+            const firebaseConfig = {
+  apiKey: "AIzaSyB0NB7Vbk1t3MaiGQAdXxgHma-M2r5XRwM",
+  authDomain: "bk-man2ponorogo-sch.firebaseapp.com",
+  projectId: "bk-man2ponorogo-sch",
+  storageBucket: "bk-man2ponorogo-sch.firebasestorage.app",
+  messagingSenderId: "541941044182",
+  appId: "1:541941044182:web:59904604505431abfa0a77"
+};
+
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+
+            // ===== SYNC FUNCTIONS =====
+            function showSyncIndicator(message) {
+                const existing = document.querySelector('.sync-indicator');
+                if (existing) existing.remove();
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'sync-indicator';
+                indicator.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${message}`;
+                document.body.appendChild(indicator);
+                
+                setTimeout(() => {
+                    indicator.classList.add('fade-out');
+                    setTimeout(() => indicator.remove(), 300);
+                }, 1500);
+            }
+
+            // ===== DATA COLLECTIONS =====
+            const collections = {
+                users: db.collection('users'),
+                messages: db.collection('messages'),
+                articles: db.collection('articles'),
+                appointments: db.collection('appointments')
+            };
+
+            // ===== ELEMENTS =====
+            const loginPage = document.getElementById('loginPage');
+            const navbarContainer = document.getElementById('navbarContainer');
+            const mainWrapper = document.getElementById('mainWrapper');
+            const footerContainer = document.getElementById('footerContainer');
+            const userRole = document.getElementById('userRole');
+            const avatarIcon = document.querySelector('#avatar i');
+            const logoutIcon = document.getElementById('logoutIcon');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const userEmailDisplay = document.getElementById('userEmailDisplay');
+          
+            const homeSections = document.getElementById('homeSections');
+            const notesPage = document.getElementById('notesPage');
+            const detailPage = document.getElementById('detailPage');
+            const artikelPage = document.getElementById('artikelPage');
+            const chatPage = document.getElementById('chatPage');
+            const janjianPage = document.getElementById('janjianPage');
+            const semuaJanjianPage = document.getElementById('semuaJanjianPage');
+          
+            const menuArtikel = document.getElementById('menuArtikel');
+            const menuJanjian = document.getElementById('menuJanjian');
+          
+            const backButton = document.getElementById('backToHome');
+            const backFromDetail = document.getElementById('backFromDetail');
+            const backFromArtikel = document.getElementById('backFromArtikel');
+            const backFromChat = document.getElementById('backFromChat');
+            const backFromJanjian = document.getElementById('backFromJanjian');
+            const backFromSemuaJanjian = document.getElementById('backFromSemuaJanjian');
+          
+            const topNav = document.getElementById('topNav');
+            const bottomUtility = document.getElementById('bottomUtility');
+            const noteTitle = document.getElementById('noteTitle');
+            const noteContent = document.getElementById('noteContent');
+            const sendButton = document.getElementById('sendArticleBtn');
+            const articleGrid = document.getElementById('articleGrid');
+            const artikelGridFull = document.getElementById('artikelGridFull');
+            const detailTitle = document.getElementById('detailTitle');
+            const detailParagraph = document.getElementById('detailParagraph');
+          
+            const janjianList = document.getElementById('janjianList');
+            const semuaJanjianList = document.getElementById('semuaJanjianList');
+            const janjianUsername = document.getElementById('janjianUsername');
+            const janjianDate = document.getElementById('janjianDate');
+            const janjianStartTime = document.getElementById('janjianStartTime');
+            const janjianEndTime = document.getElementById('janjianEndTime');
+            const saveJanjianBtn = document.getElementById('saveJanjianBtn');
+          
+            const chatSearch = document.getElementById('chatSearch');
+            const chatContacts = document.getElementById('chatContacts');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const sendChatBtn = document.getElementById('sendChatBtn');
+            const chatInputArea = document.getElementById('chatInputArea');
+            const toggleSidebarBtn = document.getElementById('toggleChatSidebar');
+            const chatSidebar = document.getElementById('chatSidebar');
+          
+            // State variables
+            let currentUserRole = null; // 'guru' or 'siswa'
+            let currentUser = null;
+            
+            // Guru contact list
+            const guruContacts = [
+                { id: 'guru_1', name: 'Pak Heri', email: 'pak.heri@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true },
+                { id: 'guru_2', name: 'Bu Yuli', email: 'bu.yuli@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true },
+                { id: 'guru_3', name: 'Bu Reni', email: 'bu.reni@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true }
+            ];
+            
+            let contacts = [];
+            let messages = {};
+            let currentContactId = null;
+            let usersList = [];
+            
+            // ===== PERSISTENCE KEYS =====
+            const PAGE_STATE_KEY = 'bk_page_state';
+            const HOME_SCROLL_KEY = 'bk_home_scroll';
+            const NOTES_SCROLL_KEY = 'bk_notes_scroll';
+            const DETAIL_SCROLL_KEY = 'bk_detail_scroll';
+            const ARTIKEL_SCROLL_KEY = 'bk_artikel_scroll';
+            const CHAT_SCROLL_KEY = 'bk_chat_scroll';
+            const JANJIAN_SCROLL_KEY = 'bk_janjian_scroll';
+            const SEMUA_JANJIAN_SCROLL_KEY = 'bk_semua_janjian_scroll';
+            const LAST_DETAIL_TITLE_KEY = 'bk_last_detail_title';
+            const LAST_DETAIL_CONTENT_KEY = 'bk_last_detail_content';
+            const JANJIAN_FORM_KEY = 'bk_janjian_form';
+            const CHAT_DRAFT_PREFIX = 'bk_chat_draft_';
+            
+            // ===== FIREBASE DATA LOADING =====
+            async function loadUsersFromFirebase() {
+                try {
+                    const snapshot = await collections.users.get();
+                    usersList = [];
+                    snapshot.forEach(doc => {
+                        usersList.push({ id: doc.id, ...doc.data() });
+                    });
+                    rebuildContacts();
+                } catch (error) {
+                    console.error('Error loading users:', error);
+                }
+            }
+            
+            async function loadMessagesFromFirebase() {
+                try {
+                    const snapshot = await collections.messages.get();
+                    messages = {};
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        messages[doc.id] = data.messages || [];
+                    });
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                }
+            }
+
+            async function loadArticlesFromFirebase() {
+                try {
+                    const snapshot = await collections.articles.get();
+                    const articles = [];
+                    snapshot.forEach(doc => {
+                        articles.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderArticles(articles);
+                } catch (error) {
+                    console.error('Error loading articles:', error);
+                }
+            }
+
+            async function loadAppointmentsFromFirebase() {
+                try {
+                    const snapshot = await collections.appointments.get();
+                    const appointments = [];
+                    snapshot.forEach(doc => {
+                        appointments.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderAppointments(appointments);
+                } catch (error) {
+                    console.error('Error loading appointments:', error);
+                }
+            }
+
+            async function saveUserToFirebase(userData) {
+                try {
+                    const existing = await collections.users.where('email', '==', userData.email).get();
+                    if (existing.empty) {
+                        await collections.users.add({
+                            name: userData.name,
+                            email: userData.email,
+                            role: userData.role,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        showSyncIndicator(`${userData.role === 'guru' ? 'Guru' : 'Siswa'} ditambahkan`);
+                    } else {
+                        const docId = existing.docs[0].id;
+                        await collections.users.doc(docId).update({
+                            name: userData.name,
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        showSyncIndicator('Data pengguna diperbarui');
+                    }
+                    await loadUsersFromFirebase();
+                } catch (error) {
+                    console.error('Error saving user:', error);
+                }
+            }
+
+            async function saveMessagesToFirebase() {
+                try {
+                    for (const [contactId, messageList] of Object.entries(messages)) {
+                        await collections.messages.doc(contactId).set({
+                            messages: messageList,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error saving messages:', error);
+                }
+            }
+
+            async function saveArticleToFirebase(article) {
+                try {
+                    await collections.articles.add({
+                        title: article.title,
+                        content: article.content,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        createdBy: currentUser ? currentUser.email : 'unknown'
+                    });
+                    showSyncIndicator('Artikel tersimpan');
+                    await loadArticlesFromFirebase();
+                } catch (error) {
+                    console.error('Error saving article:', error);
+                }
+            }
+
+            async function saveAppointmentToFirebase(appointment) {
+                try {
+                    await collections.appointments.add({
+                        nama: appointment.nama,
+                        date: appointment.date,
+                        startTime: appointment.startTime,
+                        endTime: appointment.endTime,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        createdBy: currentUser ? currentUser.email : 'unknown'
+                    });
+                    showSyncIndicator('Jadwal tersimpan');
+                    await loadAppointmentsFromFirebase();
+                } catch (error) {
+                    console.error('Error saving appointment:', error);
+                }
+            }
+
+            async function deleteArticleFromFirebase(articleId) {
+                try {
+                    await collections.articles.doc(articleId).delete();
+                    showSyncIndicator('Artikel dihapus');
+                    await loadArticlesFromFirebase();
+                } catch (error) {
+                    console.error('Error deleting article:', error);
+                }
+            }
+
+            async function deleteAppointmentFromFirebase(appointmentId) {
+                try {
+                    await collections.appointments.doc(appointmentId).delete();
+                    showSyncIndicator('Jadwal dihapus');
+                    await loadAppointmentsFromFirebase();
+                } catch (error) {
+                    console.error('Error deleting appointment:', error);
+                }
+            }
+            
+            function rebuildContacts() {
+                contacts = [...guruContacts];
+                const students = usersList.filter(u => u.role === 'siswa');
+                students.forEach((student, index) => {
+                    contacts.push({
+                        id: student.id || `student_${index}`,
+                        name: student.name,
+                        email: student.email,
+                        avatar: 'fas fa-user-graduate',
+                        isStudent: true
+                    });
+                });
+                contacts.forEach(contact => {
+                    if (!messages[contact.id]) messages[contact.id] = [];
+                });
+            }
+
+            // ===== RENDER FUNCTIONS =====
+            function renderArticles(articles) {
+                articleGrid.innerHTML = '';
+                artikelGridFull.innerHTML = '';
+                
+                if (articles.length === 0) {
+                    const emptyMsg = '<div class="empty-article-message"><i class="far fa-newspaper"></i><br>Belum ada artikel.</div>';
+                    articleGrid.innerHTML = emptyMsg;
+                    artikelGridFull.innerHTML = emptyMsg;
+                    return;
+                }
+                
+                articles.forEach(article => {
+                    [articleGrid, artikelGridFull].forEach(container => {
+                        const card = createArticleCard(article);
+                        container.appendChild(card);
+                    });
+                });
+            }
+
+            function createArticleCard(article) {
+                const card = document.createElement('div');
+                card.className = 'article-card';
+                card.dataset.articleId = article.id;
+                card.dataset.title = article.title;
+                card.dataset.content = article.content || '';
+                
+                card.innerHTML = `
+                    <div class="art-icon"><span class="material-symbols-outlined">auto_stories</span></div>
+                    <h4>${article.title}</h4>
+                    <p>${article.content ? article.content.substring(0, 50) + '...' : 'Baru saja ditambahkan'}</p>
+                    <span class="card-menu-icon material-symbols-outlined">more_vert</span>
+                    <div class="card-popup-menu"></div>
+                `;
+                
+                const dotsSpan = card.querySelector('.card-menu-icon');
+                const popup = card.querySelector('.card-popup-menu');
+                popup.innerHTML = `
+                    <div class="popup-item" data-action="edit"><i class="fas fa-edit"></i> Edit</div>
+                    <div class="popup-item" data-action="delete"><i class="fas fa-trash-alt"></i> Delete</div>
+                `;
+                
+                dotsSpan.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.card-popup-menu.show').forEach(p => {
+                        if (p !== popup) p.classList.remove('show');
+                    });
+                    popup.classList.toggle('show');
+                });
+                
+                popup.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    noteTitle.value = article.title;
+                    noteContent.value = article.content || '';
+                    card.dataset.editing = 'true';
+                    popup.classList.remove('show');
+                    showNotesPage();
+                });
+                
+                popup.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm('Hapus artikel ini?')) {
+                        deleteArticleFromFirebase(article.id);
+                    }
+                    popup.classList.remove('show');
+                });
+                
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('card-menu-icon') || e.target.closest('.card-popup-menu')) return;
+                    showDetailPage(article.title, article.content || '');
+                });
+                
+                return card;
+            }
+
+            function renderAppointments(appointments) {
+                janjianList.innerHTML = '';
+                semuaJanjianList.innerHTML = '';
+                
+                if (appointments.length === 0) {
+                    const emptyMsg = '<div class="empty-article-message"><i class="far fa-calendar-alt"></i><br>Belum ada jadwal temu.</div>';
+                    janjianList.innerHTML = emptyMsg;
+                    semuaJanjianList.innerHTML = emptyMsg;
+                    return;
+                }
+                
+                appointments.forEach(appointment => {
+                    const card = createAppointmentCard(appointment);
+                    janjianList.appendChild(card.cloneNode(true));
+                    semuaJanjianList.appendChild(card.cloneNode(true));
+                });
+            }
+
+            function createAppointmentCard(appointment) {
+                const card = document.createElement('div');
+                card.className = 'jadwal-row';
+                card.dataset.appointmentId = appointment.id;
+                
+                let waktu = '';
+                let hariTanggal = '';
+                
+                if (appointment.date && appointment.startTime && appointment.endTime) {
+                    const dateObj = new Date(appointment.date + 'T12:00:00');
+                    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const dayName = days[dateObj.getDay()];
+                    const formattedDate = formatDateToDisplay(appointment.date);
+                    const startFormatted = formatTimeToDisplay(appointment.startTime);
+                    const endFormatted = formatTimeToDisplay(appointment.endTime);
+                    waktu = `${startFormatted} - ${endFormatted}`;
+                    hariTanggal = `${dayName}, ${formattedDate}`;
+                }
+                
+                card.innerHTML = `
+                    <div class="jadwal-icon"><span class="material-symbols-outlined">calendar_month</span></div>
+                    <div class="jadwal-details">
+                        <h4>${appointment.nama}</h4>
+                        <p>
+                            <span><i class="fas fa-clock"></i> ${waktu}</span>
+                            <span><i class="fas fa-calendar-alt"></i> ${hariTanggal}</span>
+                        </p>
+                    </div>
+                    <span class="jadwal-menu-icon material-symbols-outlined">more_vert</span>
+                    <div class="jadwal-popup-menu"></div>
+                `;
+                
+                const menuIcon = card.querySelector('.jadwal-menu-icon');
+                const popup = card.querySelector('.jadwal-popup-menu');
+                popup.innerHTML = `
+                    <div class="jadwal-popup-item" data-action="edit"><i class="fas fa-edit"></i> Edit</div>
+                    <div class="jadwal-popup-item" data-action="delete"><i class="fas fa-trash-alt"></i> Delete</div>
+                `;
+                
+                menuIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.jadwal-popup-menu.show').forEach(p => {
+                        if (p !== popup) p.classList.remove('show');
+                    });
+                    popup.classList.toggle('show');
+                });
+                
+                popup.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    popup.classList.remove('show');
+                    janjianUsername.value = appointment.nama;
+                    janjianDate.value = appointment.date;
+                    janjianStartTime.value = appointment.startTime;
+                    janjianEndTime.value = appointment.endTime;
+                    window.editingAppointmentId = appointment.id;
+                    showJanjianPage();
+                });
+                
+                popup.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm('Hapus jadwal ini?')) {
+                        deleteAppointmentFromFirebase(appointment.id);
+                    }
+                    popup.classList.remove('show');
+                });
+                
+                return card;
+            }
+            
+            function formatDateToDisplay(dateStr) {
+                if (!dateStr) return '';
+                const [year, month, day] = dateStr.split('-');
+                const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                return `${parseInt(day)} ${months[parseInt(month)-1]} ${year}`;
+            }
+            
+            function formatTimeToDisplay(timeStr) {
+                if (!timeStr) return '';
+                const [hour, minute] = timeStr.split(':');
+                const h = parseInt(hour);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hour12 = h % 12 || 12;
+                return `${hour12}:${minute} ${ampm}`;
+            }
+            
+            // ===== GOOGLE SIGN IN =====
+            async function handleGoogleSignIn() {
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' });
+                    const result = await auth.signInWithPopup(provider);
+                    const user = result.user;
+                    
+                    currentUser = user;
+                    
+                    // Check if user exists in Firestore
+                    const snapshot = await collections.users.where('email', '==', user.email).get();
+                    
+                    if (snapshot.empty) {
+                        // New user - need to set role
+                        // Show role selection modal or use existing role from login options?
+                        // For now, default to 'siswa' and let user choose later
+                        const role = currentUserRole || 'siswa';
+                        await saveUserToFirebase({
+                            name: user.displayName || user.email.split('@')[0],
+                            email: user.email,
+                            role: role
+                        });
+                    }
+                    
+                    // Set user session
+                    localStorage.setItem('userDisplayName', user.displayName || user.email.split('@')[0]);
+                    localStorage.setItem('userEmail', user.email);
+                    localStorage.setItem('userRole', currentUserRole || 'siswa');
+                    localStorage.setItem('userId', user.uid);
+                    
+                    userNameDisplay.textContent = user.displayName || user.email.split('@')[0];
+                    userEmailDisplay.textContent = user.email;
+                    
+                    if (currentUserRole === 'guru') {
+                        userRole.textContent = 'Guru BK';
+                        avatarIcon.className = 'fas fa-chalkboard-teacher';
+                    } else {
+                        userRole.textContent = 'Siswa';
+                        avatarIcon.className = 'fas fa-user-graduate';
+                    }
+                    
+                    showMainApp();
+                    
+                } catch (error) {
+                    console.error('Error signing in with Google:', error);
+                    alert('Gagal login dengan Google: ' + error.message);
+                }
+            }
+            
+            // ===== PAGE SWITCHING =====
+            function scrollToTop() {
+                window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+            
+            function showMainApp() {
+                loginPage.style.display = 'none';
+                navbarContainer.style.display = 'block';
+                mainWrapper.classList.add('show');
+                footerContainer.classList.add('show');
+                
+                const role = localStorage.getItem('userRole');
+                const addBoxIcon = document.getElementById('addBoxIcon');
+                
+                if (role === 'guru') {
+                    if (addBoxIcon) addBoxIcon.classList.remove('siswa-hidden');
+                } else {
+                    if (addBoxIcon) addBoxIcon.classList.add('siswa-hidden');
+                }
+                
+                showHomePage();
+                scrollToTop();
+            }
+            
+            function handleLogout() {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userDisplayName');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem(LAST_DETAIL_TITLE_KEY);
+                localStorage.removeItem(LAST_DETAIL_CONTENT_KEY);
+                localStorage.removeItem(JANJIAN_FORM_KEY);
+                
+                auth.signOut().catch(console.error);
+                
+                contacts.forEach(c => localStorage.removeItem(CHAT_DRAFT_PREFIX + c.id));
+                
+                navbarContainer.style.display = 'none';
+                mainWrapper.classList.remove('show');
+                footerContainer.classList.remove('show');
+                loginPage.style.display = 'flex';
+                scrollToTop();
+            }
+            
+            // ===== CHAT FUNCTIONS =====
+            function renderContacts(filter = '') {
+                chatContacts.innerHTML = '';
+                
+                const currentUserRole = localStorage.getItem('userRole');
+                let contactsToShow = [];
+                
+                if (currentUserRole === 'guru') {
+                    contactsToShow = contacts.filter(c => c.isStudent);
+                } else {
+                    contactsToShow = contacts.filter(c => c.isGuru);
+                }
+                
+                const filteredContacts = contactsToShow.filter(contact =>
+                    contact.name.toLowerCase().includes(filter.toLowerCase()) ||
+                    (contact.email && contact.email.toLowerCase().includes(filter.toLowerCase()))
+                );
+              
+                filteredContacts.forEach(contact => {
+                    const contactEl = document.createElement('div');
+                    contactEl.className = `chat-contact ${contact.id === currentContactId ? 'active' : ''}`;
+                    contactEl.dataset.contactId = contact.id;
+                    contactEl.innerHTML = `
+                        <div class="contact-avatar"><i class="${contact.avatar}"></i></div>
+                        <div class="contact-info">
+                            <div class="contact-name">${contact.name}</div>
+                            ${contact.email ? `<div class="contact-email">${contact.email}</div>` : ''}
+                        </div>
+                    `;
+                  
+                    contactEl.addEventListener('click', () => {
+                        document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
+                        contactEl.classList.add('active');
+                        currentContactId = contact.id;
+                        renderMessages();
+                        loadChatDraft();
+                        if (chatInputArea) chatInputArea.style.display = 'flex';
+                    });
+                  
+                    chatContacts.appendChild(contactEl);
+                });
+              
+                if (filteredContacts.length === 0) {
+                    const emptyEl = document.createElement('div');
+                    emptyEl.className = 'empty-article-message';
+                    emptyEl.innerHTML = '<i class="fas fa-search"></i><br>Tidak ada kontak ditemukan';
+                    chatContacts.appendChild(emptyEl);
+                }
+            }
+          
+            function createMessageMenu(messageId) {
+                const menu = document.createElement('div');
+                menu.className = 'message-popup-menu';
+                menu.id = `menu-${messageId}`;
+                menu.innerHTML = `
+                    <div class="message-popup-item copy" data-action="copy"><i class="fas fa-copy"></i> Salin</div>
+                    <div class="message-popup-item delete" data-action="delete"><i class="fas fa-trash-alt"></i> Hapus</div>
+                `;
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target) && !e.target.closest('.message-menu-dots')) {
+                        menu.classList.remove('show');
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+                return menu;
+            }
+          
+            function renderMessages() {
+                const contactMessages = messages[currentContactId] || [];
+                chatMessages.innerHTML = '';
+              
+                if (contactMessages.length === 0) {
+                    const contact = contacts.find(c => c.id === currentContactId);
+                    chatMessages.innerHTML = `
+                        <div class="empty-chat-message">
+                            <i class="fas fa-comments"></i>
+                            <p>Mulai percakapan dengan ${contact ? contact.name : 'kontak'}</p>
+                        </div>
+                    `;
+                } else {
+                    contactMessages.forEach((msg, index) => {
+                        const messageId = `msg-${currentContactId}-${index}`;
+                        const messageWrapper = document.createElement('div');
+                        messageWrapper.className = `message-wrapper ${msg.type}`;
+                      
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${msg.type}`;
+                        messageDiv.innerHTML = `
+                            <div class="message-text">${msg.text}</div>
+                            <div class="message-time">${msg.time}</div>
+                        `;
+                      
+                        const dotsSpan = document.createElement('span');
+                        dotsSpan.className = 'message-menu-dots material-symbols-outlined';
+                        dotsSpan.textContent = 'more_vert';
+                      
+                        const menu = createMessageMenu(messageId);
+                      
+                        dotsSpan.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            document.querySelectorAll('.message-popup-menu.show').forEach(m => m.classList.remove('show'));
+                            menu.classList.toggle('show');
+                        });
+                      
+                        menu.querySelector('[data-action="copy"]').addEventListener('click', () => {
+                            menu.classList.remove('show');
+                            navigator.clipboard.writeText(msg.text).then(() => alert('Pesan disalin ke clipboard')).catch(() => alert('Gagal menyalin pesan'));
+                        });
+                      
+                        menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+                            menu.classList.remove('show');
+                            if (confirm('Hapus pesan ini?')) {
+                                messages[currentContactId].splice(index, 1);
+                                renderMessages();
+                                saveMessagesToFirebase();
+                            }
+                        });
+                      
+                        messageWrapper.appendChild(messageDiv);
+                        messageWrapper.appendChild(dotsSpan);
+                        messageWrapper.appendChild(menu);
+                        chatMessages.appendChild(messageWrapper);
+                    });
+                }
+              
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+          
+            function sendChatMessage() {
+                const message = chatInput.value.trim();
+                if (message === '') return;
+              
+                const now = new Date();
+                const timeString = now.getHours() + ':' + now.getMinutes().toString().padStart(2, '0');
+              
+                messages[currentContactId].push({
+                    type: 'sent',
+                    text: message,
+                    time: timeString
+                });
+              
+                renderMessages();
+                chatInput.value = '';
+                if (currentContactId) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContactId);
+                saveMessagesToFirebase();
+            }
+
+            function loadChatDraft() {
+                if (!chatInput || !currentContactId) return;
+                const draftKey = CHAT_DRAFT_PREFIX + currentContactId;
+                const draft = localStorage.getItem(draftKey) || '';
+                chatInput.value = draft;
+            }
+            
+            // ===== PAGE STATE & SCROLL =====
+            let homeScrollY = parseInt(localStorage.getItem(HOME_SCROLL_KEY)) || 0;
+            let notesScrollY = parseInt(localStorage.getItem(NOTES_SCROLL_KEY)) || 0;
+            let detailScrollY = parseInt(localStorage.getItem(DETAIL_SCROLL_KEY)) || 0;
+            let artikelScrollY = parseInt(localStorage.getItem(ARTIKEL_SCROLL_KEY)) || 0;
+            let chatScrollY = parseInt(localStorage.getItem(CHAT_SCROLL_KEY)) || 0;
+            let janjianScrollY = parseInt(localStorage.getItem(JANJIAN_SCROLL_KEY)) || 0;
+            let semuaJanjianScrollY = parseInt(localStorage.getItem(SEMUA_JANJIAN_SCROLL_KEY)) || 0;
+            
+            function saveScrollPosition() {
+                if (!homeSections.classList.contains('hidden')) {
+                    homeScrollY = window.scrollY;
+                    localStorage.setItem(HOME_SCROLL_KEY, homeScrollY);
+                } else if (!notesPage.classList.contains('hidden')) {
+                    notesScrollY = window.scrollY;
+                    localStorage.setItem(NOTES_SCROLL_KEY, notesScrollY);
+                } else if (!detailPage.classList.contains('hidden')) {
+                    detailScrollY = window.scrollY;
+                    localStorage.setItem(DETAIL_SCROLL_KEY, detailScrollY);
+                } else if (!artikelPage.classList.contains('hidden')) {
+                    artikelScrollY = window.scrollY;
+                    localStorage.setItem(ARTIKEL_SCROLL_KEY, artikelScrollY);
+                } else if (!chatPage.classList.contains('hidden')) {
+                    chatScrollY = window.scrollY;
+                    localStorage.setItem(CHAT_SCROLL_KEY, chatScrollY);
+                } else if (!janjianPage.classList.contains('hidden')) {
+                    janjianScrollY = window.scrollY;
+                    localStorage.setItem(JANJIAN_SCROLL_KEY, janjianScrollY);
+                } else if (!semuaJanjianPage.classList.contains('hidden')) {
+                    semuaJanjianScrollY = window.scrollY;
+                    localStorage.setItem(SEMUA_JANJIAN_SCROLL_KEY, semuaJanjianScrollY);
+                }
+            }
+            
+            window.addEventListener('scroll', () => { saveScrollPosition(); });
+            
+            function savePageState(page) { localStorage.setItem(PAGE_STATE_KEY, page); }
+            
+            function showHomePage() {
+                saveScrollPosition();
+                homeSections.classList.remove('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.remove('hidden');
+                footerContainer.classList.add('show');
+                bottomUtility.classList.remove('hidden');
+                savePageState('home');
+                setTimeout(() => { window.scrollTo({ top: homeScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function showNotesPage() {
+                saveScrollPosition();
+                homeSections.classList.add('hidden');
+                notesPage.classList.add('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                const addMenu = document.getElementById('addMenu');
+                if (addMenu) addMenu.classList.remove('show');
+                savePageState('notes');
+                setTimeout(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, 20);
+            }
+            
+            function showArtikelPage() {
+                saveScrollPosition();
+                homeSections.classList.add('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.add('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                const addMenu = document.getElementById('addMenu');
+                if (addMenu) addMenu.classList.remove('show');
+                savePageState('artikel');
+                setTimeout(() => { window.scrollTo({ top: artikelScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function showDetailPage(title, content) {
+                saveScrollPosition();
+                detailTitle.textContent = title;
+                detailParagraph.textContent = content;
+                localStorage.setItem(LAST_DETAIL_TITLE_KEY, title);
+                localStorage.setItem(LAST_DETAIL_CONTENT_KEY, content);
+                homeSections.classList.add('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.add('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                savePageState('detail');
+                setTimeout(() => { window.scrollTo({ top: detailScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function showChatPage() {
+                saveScrollPosition();
+                homeSections.classList.add('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.add('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                const addMenu = document.getElementById('addMenu');
+                if (addMenu) addMenu.classList.remove('show');
+                savePageState('chat');
+                if (chatSidebar) chatSidebar.classList.remove('hidden');
+                
+                const role = localStorage.getItem('userRole');
+                if (role === 'siswa') {
+                    const pakHeri = contacts.find(c => c.name === 'Pak Heri');
+                    if (pakHeri) {
+                        currentContactId = pakHeri.id;
+                    }
+                } else if (role === 'guru') {
+                    const firstStudent = contacts.find(c => c.isStudent);
+                    if (firstStudent) {
+                        currentContactId = firstStudent.id;
+                    }
+                }
+                
+                renderContacts();
+                renderMessages();
+                loadChatDraft();
+                if (currentContactId) chatInputArea.style.display = 'flex';
+                setTimeout(() => { window.scrollTo({ top: chatScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function showJanjianPage() {
+                saveScrollPosition();
+                homeSections.classList.add('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.add('show');
+                semuaJanjianPage.classList.remove('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                const addMenu = document.getElementById('addMenu');
+                if (addMenu) addMenu.classList.remove('show');
+                savePageState('janjian');
+
+                if (!window.editingAppointmentId) {
+                    const savedFormStr = localStorage.getItem(JANJIAN_FORM_KEY);
+                    if (savedFormStr) {
+                        try {
+                            const f = JSON.parse(savedFormStr);
+                            if (janjianUsername) janjianUsername.value = f.username || '';
+                            if (janjianDate) janjianDate.value = f.date || '';
+                            if (janjianStartTime) janjianStartTime.value = f.startTime || '';
+                            if (janjianEndTime) janjianEndTime.value = f.endTime || '';
+                        } catch (e) {}
+                    }
+                }
+
+                setTimeout(() => { setupDatePickerOnClick(); }, 100);
+                setTimeout(() => { window.scrollTo({ top: janjianScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function showSemuaJanjianPage() {
+                saveScrollPosition();
+                homeSections.classList.add('hidden');
+                notesPage.classList.remove('show');
+                detailPage.classList.remove('show');
+                artikelPage.classList.remove('show');
+                chatPage.classList.remove('show');
+                janjianPage.classList.remove('show');
+                semuaJanjianPage.classList.add('show');
+                topNav.classList.add('hidden');
+                footerContainer.classList.remove('show');
+                bottomUtility.classList.add('hidden');
+                const addMenu = document.getElementById('addMenu');
+                if (addMenu) addMenu.classList.remove('show');
+                savePageState('semuaJanjian');
+                setTimeout(() => { window.scrollTo({ top: semuaJanjianScrollY, behavior: 'instant' }); }, 20);
+            }
+            
+            function setupDatePickerOnClick() {
+                const dateInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
+                dateInputs.forEach(input => {
+                    input.removeEventListener('click', openPickerHandler);
+                    input.addEventListener('click', openPickerHandler);
+                });
+            }
+            
+            function openPickerHandler(e) {
+                const input = e.target;
+                if (document.activeElement === input && input.value) return;
+                if (typeof input.showPicker === 'function') input.showPicker();
+                input.focus();
+            }
+            
+            // ===== TOGGLE SIDEBAR CHAT =====
+            if (toggleSidebarBtn && chatSidebar) {
+                toggleSidebarBtn.addEventListener('click', function() {
+                    chatSidebar.classList.toggle('hidden');
+                });
+            }
+            
+            // ===== CHAT SEARCH =====
+            if (chatSearch) {
+                chatSearch.addEventListener('input', function(e) {
+                    renderContacts(e.target.value);
+                });
+            }
+            
+            // ===== CHAT SEND & DRAFT =====
+            if (sendChatBtn) {
+                sendChatBtn.addEventListener('click', sendChatMessage);
+            }
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                });
+                chatInput.addEventListener('input', () => {
+                    if (currentContactId) {
+                        localStorage.setItem(CHAT_DRAFT_PREFIX + currentContactId, chatInput.value);
+                    }
+                });
+            }
+            
+            // ===== LOGIN HANDLERS =====
+            function handleLogin(role) {
+                currentUserRole = role;
+                handleGoogleSignIn();
+            }
+            
+            document.getElementById('loginGuru').addEventListener('click', () => handleLogin('guru'));
+            document.getElementById('loginSiswa').addEventListener('click', () => handleLogin('siswa'));
+            document.getElementById('googleSignInBtn').addEventListener('click', () => handleLogin('siswa'));
+            
+            // ===== INIT =====
+            const savedRole = localStorage.getItem('userRole');
+            const savedName = localStorage.getItem('userDisplayName');
+            const savedEmail = localStorage.getItem('userEmail');
+            
+            loadUsersFromFirebase();
+            loadMessagesFromFirebase();
+            loadArticlesFromFirebase();
+            loadAppointmentsFromFirebase();
+            
+            if (savedRole && savedName) {
+                userNameDisplay.textContent = savedName;
+                if (savedEmail) userEmailDisplay.textContent = savedEmail;
+                if (savedRole === 'guru') {
+                    userRole.textContent = 'Guru BK';
+                    avatarIcon.className = 'fas fa-chalkboard-teacher';
+                } else {
+                    userRole.textContent = 'Siswa';
+                    avatarIcon.className = 'fas fa-user-graduate';
+                }
+                showMainApp();
+                scrollToTop();
+            } else {
+                loginPage.style.display = 'flex';
+                navbarContainer.style.display = 'none';
+                mainWrapper.classList.remove('show');
+                footerContainer.classList.remove('show');
+                scrollToTop();
+            }
+            
+            setupDatePickerOnClick();
+            
+            // ===== SETUP JANJIAN FORM PERSISTENCE =====
+            if (janjianUsername && janjianDate && janjianStartTime && janjianEndTime) {
+                janjianUsername.addEventListener('input', () => {
+                    const formData = {
+                        username: janjianUsername.value,
+                        date: janjianDate.value,
+                        startTime: janjianStartTime.value,
+                        endTime: janjianEndTime.value
+                    };
+                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
+                });
+                janjianDate.addEventListener('input', () => {
+                    const formData = {
+                        username: janjianUsername.value,
+                        date: janjianDate.value,
+                        startTime: janjianStartTime.value,
+                        endTime: janjianEndTime.value
+                    };
+                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
+                });
+                janjianStartTime.addEventListener('input', () => {
+                    const formData = {
+                        username: janjianUsername.value,
+                        date: janjianDate.value,
+                        startTime: janjianStartTime.value,
+                        endTime: janjianEndTime.value
+                    };
+                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
+                });
+                janjianEndTime.addEventListener('input', () => {
+                    const formData = {
+                        username: janjianUsername.value,
+                        date: janjianDate.value,
+                        startTime: janjianStartTime.value,
+                        endTime: janjianEndTime.value
+                    };
+                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
+                });
+            }
+            
+            if (logoutIcon) logoutIcon.addEventListener('click', handleLogout);
+            
+            // Menu items
+            if (menuArtikel) {
+                menuArtikel.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showNotesPage();
+                    const addMenu = document.getElementById('addMenu');
+                    if (addMenu) addMenu.classList.remove('show');
+                });
+            }
+            
+            if (menuJanjian) {
+                menuJanjian.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.editingAppointmentId = null;
+                    showJanjianPage();
+                    const addMenu = document.getElementById('addMenu');
+                    if (addMenu) addMenu.classList.remove('show');
+                });
+            }
+            
+            // Back buttons
+            if (backButton) backButton.addEventListener('click', () => showHomePage());
+            if (backFromDetail) backFromDetail.addEventListener('click', () => showHomePage());
+            if (backFromArtikel) backFromArtikel.addEventListener('click', () => showHomePage());
+            if (backFromChat) backFromChat.addEventListener('click', () => showHomePage());
+            if (backFromJanjian) backFromJanjian.addEventListener('click', () => showHomePage());
+            if (backFromSemuaJanjian) backFromSemuaJanjian.addEventListener('click', () => showHomePage());
+            
+            // Service chat
+            document.querySelectorAll('.service-item[data-service="chat"]').forEach(item => {
+                item.addEventListener('click', () => { showChatPage(); });
+            });
+            
+            // Add box menu
+            const addBoxIcon = document.getElementById('addBoxIcon');
+            const addMenu = document.getElementById('addMenu');
+            if (addBoxIcon && addMenu) {
+                addBoxIcon.addEventListener('click', (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); });
+                document.addEventListener('click', (e) => {
+                    if (!addBoxIcon.contains(e.target) && !addMenu.contains(e.target)) {
+                        addMenu.classList.remove('show');
+                    }
+                });
+            }
+            
+            // Links
+            const moreArticles = document.getElementById('moreArticles');
+            if (moreArticles) moreArticles.addEventListener('click', (e) => { e.preventDefault(); showArtikelPage(); });
+            const janjianLink = document.getElementById('janjianLink');
+            if (janjianLink) janjianLink.addEventListener('click', (e) => { e.preventDefault(); showSemuaJanjianPage(); });
+            
+            // Send article
+            if (sendButton) {
+                sendButton.addEventListener('click', () => {
+                    const title = noteTitle.value.trim();
+                    const content = noteContent.value.trim();
+                    if (title === '') { alert('Judul tidak boleh kosong!'); return; }
+                    
+                    saveArticleToFirebase({ title, content });
+                    
+                    noteTitle.value = ''; 
+                    noteContent.value = '';
+                    localStorage.removeItem('bk_note_title'); 
+                    localStorage.removeItem('bk_note_content');
+                    showHomePage();
+                });
+            }
+            
+            // Save janjian
+            if (saveJanjianBtn) {
+                saveJanjianBtn.addEventListener('click', () => {
+                    const nama = janjianUsername.value.trim();
+                    const date = janjianDate.value;
+                    const startTime = janjianStartTime.value;
+                    const endTime = janjianEndTime.value;
+                    if (!nama || !date || !startTime || !endTime) { alert('Semua field harus diisi!'); return; }
+                    if (startTime >= endTime) { alert('Jam selesai harus setelah jam mulai'); return; }
+                    
+                    if (window.editingAppointmentId) {
+                        deleteAppointmentFromFirebase(window.editingAppointmentId).then(() => {
+                            saveAppointmentToFirebase({ nama, date, startTime, endTime });
+                        });
+                        window.editingAppointmentId = null;
+                    } else {
+                        saveAppointmentToFirebase({ nama, date, startTime, endTime });
+                    }
+                    
+                    janjianUsername.value = ''; 
+                    janjianDate.value = ''; 
+                    janjianStartTime.value = ''; 
+                    janjianEndTime.value = '';
+                    localStorage.removeItem(JANJIAN_FORM_KEY);
+                    showHomePage();
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
