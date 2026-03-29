@@ -986,6 +986,7 @@
             cursor: pointer;
             transition: background 0.2s;
             border-bottom: 1px solid #e0f2ef;
+            position: relative;
         }
       
         .chat-contact:hover {
@@ -1026,6 +1027,16 @@
             font-size: 0.7rem;
             color: #009688;
             margin-top: 0.125rem;
+        }
+        
+        .unread-badge {
+            background: #009688;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            margin-left: 8px;
+            display: inline-block;
         }
       
         .chat-main {
@@ -1733,19 +1744,20 @@
             const db = firebase.firestore();
 
             // ===== SYNC FUNCTIONS =====
-            function showSyncIndicator(message) {
+            function showSyncIndicator(message, isError = false) {
                 const existing = document.querySelector('.sync-indicator');
                 if (existing) existing.remove();
                 
                 const indicator = document.createElement('div');
                 indicator.className = 'sync-indicator';
-                indicator.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${message}`;
+                indicator.style.background = isError ? '#dc3545' : '#009688';
+                indicator.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-sync-alt fa-spin'}"></i> ${message}`;
                 document.body.appendChild(indicator);
                 
                 setTimeout(() => {
                     indicator.classList.add('fade-out');
-                    setTimeout(() => indicator.remove(), 300);
-                }, 1500);
+                    setTimeout(() => indicator.remove(), 2000);
+                }, 2000);
             }
 
             // ===== DATA COLLECTIONS =====
@@ -1823,10 +1835,10 @@
             let currentUserRole = null;
             let currentUser = null;
             let contacts = [];
-            let messages = {}; // cache local untuk pesan per kontak
+            let messages = {};
             let currentContactId = null;
             let usersList = [];
-            let currentMessagesListener = null; // untuk unsubscribe listener Firestore
+            let messagesUnsubscribe = null;
             
             // ===== PERSISTENCE KEYS =====
             const PAGE_STATE_KEY = 'bk_page_state';
@@ -1853,11 +1865,97 @@
                     rebuildContacts();
                 } catch (error) {
                     console.error('Error loading users:', error);
+                    showSyncIndicator('Gagal memuat data pengguna', true);
                 }
             }
             
-            // Hapus loadMessagesFromFirebase karena kita pakai listener
+            async function loadMessagesFromFirebase() {
+                try {
+                    const snapshot = await collections.messages.get();
+                    messages = {};
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        messages[doc.id] = data.messages || [];
+                    });
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                }
+            }
+
+            // ===== REAL-TIME MESSAGES LISTENER =====
+            function setupMessagesListener() {
+                if (messagesUnsubscribe) {
+                    messagesUnsubscribe();
+                }
+                
+                messagesUnsubscribe = collections.messages.onSnapshot((snapshot) => {
+                    let hasChanges = false;
+                    
+                    snapshot.docChanges().forEach((change) => {
+                        const contactId = change.doc.id;
+                        const newMessages = change.doc.data().messages || [];
+                        const oldMessages = messages[contactId] || [];
+                        
+                        if (oldMessages.length !== newMessages.length) {
+                            hasChanges = true;
+                            messages[contactId] = newMessages;
+                        } else {
+                            for (let i = 0; i < newMessages.length; i++) {
+                                if (JSON.stringify(oldMessages[i]) !== JSON.stringify(newMessages[i])) {
+                                    hasChanges = true;
+                                    messages[contactId] = newMessages;
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                    
+                    if (hasChanges) {
+                        if (chatPage.classList.contains('show') && currentContactId) {
+                            renderMessages();
+                        }
+                        updateNotificationBadges();
+                    }
+                }, (error) => {
+                    console.error('Error listening to messages:', error);
+                    showSyncIndicator('Koneksi real-time terputus', true);
+                });
+            }
             
+            function updateNotificationBadges() {
+                const role = localStorage.getItem('userRole');
+                let contactsToCheck = [];
+                
+                if (role === 'guru') {
+                    contactsToCheck = contacts.filter(c => c.isStudent);
+                } else {
+                    contactsToCheck = contacts.filter(c => c.isGuru);
+                }
+                
+                contactsToCheck.forEach(contact => {
+                    const contactMessages = messages[contact.id] || [];
+                    const unreadCount = contactMessages.filter(msg => {
+                        return msg.type === 'received' && !msg.read;
+                    }).length;
+                    
+                    const contactElement = document.querySelector(`.chat-contact[data-contact-id="${contact.id}"]`);
+                    if (contactElement) {
+                        let badge = contactElement.querySelector('.unread-badge');
+                        if (unreadCount > 0) {
+                            if (!badge) {
+                                badge = document.createElement('span');
+                                badge.className = 'unread-badge';
+                                contactElement.querySelector('.contact-info').appendChild(badge);
+                            }
+                            badge.textContent = unreadCount;
+                            badge.style.display = 'inline-block';
+                        } else if (badge) {
+                            badge.style.display = 'none';
+                        }
+                    }
+                });
+            }
+
             async function loadArticlesFromFirebase() {
                 try {
                     const snapshot = await collections.articles.get();
@@ -1911,6 +2009,20 @@
                     await loadUsersFromFirebase();
                 } catch (error) {
                     console.error('Error saving user:', error);
+                    showSyncIndicator('Gagal menyimpan data pengguna', true);
+                }
+            }
+
+            async function saveMessagesToFirebase() {
+                try {
+                    for (const [contactId, messageList] of Object.entries(messages)) {
+                        await collections.messages.doc(contactId).set({
+                            messages: messageList,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    }
+                } catch (error) {
+                    console.error('Error saving messages:', error);
                 }
             }
 
@@ -1926,6 +2038,7 @@
                     await loadArticlesFromFirebase();
                 } catch (error) {
                     console.error('Error saving article:', error);
+                    showSyncIndicator('Gagal menyimpan artikel', true);
                 }
             }
 
@@ -1943,6 +2056,7 @@
                     await loadAppointmentsFromFirebase();
                 } catch (error) {
                     console.error('Error saving appointment:', error);
+                    showSyncIndicator('Gagal menyimpan jadwal', true);
                 }
             }
 
@@ -1953,6 +2067,7 @@
                     await loadArticlesFromFirebase();
                 } catch (error) {
                     console.error('Error deleting article:', error);
+                    showSyncIndicator('Gagal menghapus artikel', true);
                 }
             }
 
@@ -1963,12 +2078,12 @@
                     await loadAppointmentsFromFirebase();
                 } catch (error) {
                     console.error('Error deleting appointment:', error);
+                    showSyncIndicator('Gagal menghapus jadwal', true);
                 }
             }
             
             function rebuildContacts() {
                 contacts = [];
-                // Guru: semua user dengan role 'guru'
                 const guruUsers = usersList.filter(u => u.role === 'guru');
                 guruUsers.forEach(guru => {
                     contacts.push({
@@ -1979,7 +2094,6 @@
                         isGuru: true
                     });
                 });
-                // Siswa: semua user dengan role 'siswa'
                 const siswaUsers = usersList.filter(u => u.role === 'siswa');
                 siswaUsers.forEach(siswa => {
                     contacts.push({
@@ -1989,6 +2103,10 @@
                         avatar: 'fas fa-user-graduate',
                         isStudent: true
                     });
+                });
+
+                contacts.forEach(contact => {
+                    if (!messages[contact.id]) messages[contact.id] = [];
                 });
             }
 
@@ -2180,32 +2298,6 @@
                     .replace(/'/g, '&#39;');
             }
             
-            // ===== CHAT REAL-TIME LISTENER =====
-            function listenToMessages(contactId) {
-                // Hentikan listener sebelumnya
-                if (currentMessagesListener) {
-                    currentMessagesListener();
-                    currentMessagesListener = null;
-                }
-                if (!contactId) return;
-                
-                const docRef = collections.messages.doc(contactId);
-                currentMessagesListener = docRef.onSnapshot((docSnap) => {
-                    if (docSnap.exists) {
-                        const data = docSnap.data();
-                        messages[contactId] = data.messages || [];
-                    } else {
-                        messages[contactId] = [];
-                    }
-                    // Jika contact ini adalah yang sedang aktif, render ulang
-                    if (currentContactId === contactId) {
-                        renderMessages();
-                    }
-                }, (error) => {
-                    console.error('Error listening to messages:', error);
-                });
-            }
-            
             // ===== GOOGLE SIGN IN =====
             async function handleGoogleSignIn() {
                 try {
@@ -2354,6 +2446,11 @@
             }
             
             function handleLogout() {
+                if (messagesUnsubscribe) {
+                    messagesUnsubscribe();
+                    messagesUnsubscribe = null;
+                }
+                
                 localStorage.removeItem('userRole');
                 localStorage.removeItem('userDisplayName');
                 localStorage.removeItem('userEmail');
@@ -2366,12 +2463,6 @@
                 auth.signOut().catch(console.error);
                 
                 contacts.forEach(c => localStorage.removeItem(CHAT_DRAFT_PREFIX + c.id));
-                
-                // Hentikan listener chat
-                if (currentMessagesListener) {
-                    currentMessagesListener();
-                    currentMessagesListener = null;
-                }
                 
                 navbarContainer.style.display = 'none';
                 mainWrapper.classList.remove('show');
@@ -2414,8 +2505,6 @@
                         document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
                         contactEl.classList.add('active');
                         currentContactId = contact.id;
-                        // Pasang listener untuk kontak baru
-                        listenToMessages(currentContactId);
                         renderMessages();
                         loadChatDraft();
                         if (chatInputArea) chatInputArea.style.display = 'flex';
@@ -2430,9 +2519,11 @@
                     emptyEl.innerHTML = '<i class="fas fa-search"></i><br>Tidak ada kontak ditemukan';
                     chatContacts.appendChild(emptyEl);
                 }
+                
+                updateNotificationBadges();
             }
           
-            function createMessageMenu(messageId) {
+            function createMessageMenu(messageId, messageIndex) {
                 const menu = document.createElement('div');
                 menu.className = 'message-popup-menu';
                 menu.id = `menu-${messageId}`;
@@ -2440,18 +2531,46 @@
                     <div class="message-popup-item copy" data-action="copy"><i class="fas fa-copy"></i> Salin</div>
                     <div class="message-popup-item delete" data-action="delete"><i class="fas fa-trash-alt"></i> Hapus</div>
                 `;
-                document.addEventListener('click', function closeMenu(e) {
-                    if (!menu.contains(e.target) && !e.target.closest('.message-menu-dots')) {
-                        menu.classList.remove('show');
-                        document.removeEventListener('click', closeMenu);
+                
+                menu.querySelector('[data-action="copy"]').addEventListener('click', () => {
+                    menu.classList.remove('show');
+                    const msgText = messages[currentContactId]?.[messageIndex]?.text || '';
+                    navigator.clipboard.writeText(msgText).then(() => {
+                        showSyncIndicator('Pesan disalin');
+                    }).catch(() => {
+                        alert('Gagal menyalin pesan');
+                    });
+                });
+                
+                menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+                    menu.classList.remove('show');
+                    if (confirm('Hapus pesan ini?')) {
+                        messages[currentContactId].splice(messageIndex, 1);
+                        renderMessages();
+                        collections.messages.doc(currentContactId).set({ messages: messages[currentContactId] }, { merge: true })
+                            .then(() => showSyncIndicator('Pesan dihapus'))
+                            .catch(err => console.error('Error deleting message:', err));
                     }
                 });
+                
                 return menu;
             }
           
             function renderMessages() {
                 const contactMessages = messages[currentContactId] || [];
                 chatMessages.innerHTML = '';
+                
+                let hasUnread = false;
+                contactMessages.forEach(msg => {
+                    if (msg.type === 'received' && !msg.read) {
+                        msg.read = true;
+                        hasUnread = true;
+                    }
+                });
+                
+                if (hasUnread && currentContactId) {
+                    collections.messages.doc(currentContactId).set({ messages: contactMessages }, { merge: true });
+                }
               
                 if (contactMessages.length === 0) {
                     const contact = contacts.find(c => c.id === currentContactId);
@@ -2463,94 +2582,100 @@
                     `;
                 } else {
                     contactMessages.forEach((msg, index) => {
-                        const isSent = (msg.senderId === currentUser.uid);
                         const messageId = `msg-${currentContactId}-${index}`;
                         const messageWrapper = document.createElement('div');
-                        messageWrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+                        messageWrapper.className = `message-wrapper ${msg.type}`;
                       
                         const messageDiv = document.createElement('div');
-                        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+                        messageDiv.className = `message ${msg.type}`;
                         messageDiv.innerHTML = `
                             <div class="message-text">${escapeHtml(msg.text)}</div>
                             <div class="message-time">${msg.time}</div>
                         `;
-                      
-                        const dotsSpan = document.createElement('span');
-                        dotsSpan.className = 'message-menu-dots material-symbols-outlined';
-                        dotsSpan.textContent = 'more_vert';
-                      
-                        const menu = createMessageMenu(messageId);
-                      
-                        dotsSpan.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            document.querySelectorAll('.message-popup-menu.show').forEach(m => m.classList.remove('show'));
-                            menu.classList.toggle('show');
-                        });
-                      
-                        menu.querySelector('[data-action="copy"]').addEventListener('click', () => {
-                            menu.classList.remove('show');
-                            navigator.clipboard.writeText(msg.text).then(() => alert('Pesan disalin ke clipboard')).catch(() => alert('Gagal menyalin pesan'));
-                        });
-                      
-                        menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
-                            menu.classList.remove('show');
-                            if (confirm('Hapus pesan ini?')) {
-                                // Hapus pesan dari Firestore: perlu mengambil array terbaru, filter, lalu update
-                                const updatedMessages = messages[currentContactId].filter((_, i) => i !== index);
-                                collections.messages.doc(currentContactId).set({
-                                    messages: updatedMessages
-                                }, { merge: true }).then(() => {
-                                    // Listener akan memperbarui UI
-                                }).catch(console.error);
-                            }
-                        });
-                      
-                        messageWrapper.appendChild(messageDiv);
-                        messageWrapper.appendChild(dotsSpan);
-                        messageWrapper.appendChild(menu);
+                        
+                        if (msg.type === 'sent') {
+                            const dotsSpan = document.createElement('span');
+                            dotsSpan.className = 'message-menu-dots material-symbols-outlined';
+                            dotsSpan.textContent = 'more_vert';
+                            const menu = createMessageMenu(messageId, index);
+                            
+                            dotsSpan.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                document.querySelectorAll('.message-popup-menu.show').forEach(m => m.classList.remove('show'));
+                                menu.classList.toggle('show');
+                            });
+                            
+                            messageWrapper.appendChild(messageDiv);
+                            messageWrapper.appendChild(dotsSpan);
+                            messageWrapper.appendChild(menu);
+                        } else {
+                            messageWrapper.appendChild(messageDiv);
+                        }
                         chatMessages.appendChild(messageWrapper);
                     });
                 }
               
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+                updateNotificationBadges();
             }
           
-            async function sendChatMessage() {
+            // PERBAIKAN UTAMA: Fungsi sendChatMessage tanpa timestamp di array
+            function sendChatMessage() {
                 const message = chatInput.value.trim();
                 if (message === '') return;
+                
+                if (!currentUser) {
+                    alert('Sesi login Anda telah habis. Silakan login kembali.');
+                    handleLogout();
+                    return;
+                }
                 
                 if (!currentContactId) {
                     alert('Pilih kontak terlebih dahulu');
                     return;
                 }
                 
-                if (!currentUser) {
-                    alert('Sesi login tidak valid, silakan logout dan login kembali');
+                if (!navigator.onLine) {
+                    alert('Tidak ada koneksi internet. Pesan tidak dapat dikirim.');
                     return;
                 }
-                
+              
                 const now = new Date();
                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 
+                // HAPUS timestamp dari objek pesan karena FieldValue.serverTimestamp() tidak bisa di dalam array
                 const newMessage = {
-                    senderId: currentUser.uid,
+                    type: 'sent',
                     text: message,
                     time: timeString,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    read: false,
+                    senderId: currentUser.uid,
+                    senderEmail: currentUser.email
                 };
+              
+                if (!messages[currentContactId]) messages[currentContactId] = [];
+                messages[currentContactId].push(newMessage);
+                renderMessages();
+                chatInput.value = '';
+                if (currentContactId) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContactId);
                 
-                try {
-                    // Gunakan arrayUnion untuk menambah pesan baru
-                    await collections.messages.doc(currentContactId).set({
-                        messages: firebase.firestore.FieldValue.arrayUnion(newMessage)
-                    }, { merge: true });
-                    chatInput.value = '';
-                    if (currentContactId) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContactId);
-                    // Listener akan menangani pembaruan UI
-                } catch (error) {
+                const messageRef = collections.messages.doc(currentContactId);
+                
+                messageRef.get().then(doc => {
+                    const existingMessages = doc.exists ? doc.data().messages || [] : [];
+                    existingMessages.push(newMessage);
+                    return messageRef.set({ messages: existingMessages }, { merge: true });
+                })
+                .then(() => {
+                    console.log('Message sent successfully');
+                    showSyncIndicator('Pesan terkirim');
+                })
+                .catch(error => {
                     console.error('Error sending message:', error);
-                    alert('Gagal mengirim pesan: ' + error.message);
-                }
+                    showSyncIndicator('Gagal mengirim pesan: ' + (error.message || 'Unknown error'), true);
+                    messages[currentContactId].pop();
+                    renderMessages();
+                });
             }
 
             function loadChatDraft() {
@@ -2687,7 +2812,6 @@
                 savePageState('chat');
                 if (chatSidebar) chatSidebar.classList.remove('hidden');
                 
-                // Cek apakah data kontak sudah ada
                 if (contacts.length === 0) {
                     chatMessages.innerHTML = '<div class="empty-chat-message"><i class="fas fa-spinner fa-spin"></i><p>Memuat data kontak...</p></div>';
                     const checkData = setInterval(() => {
@@ -2701,7 +2825,6 @@
                 
                 renderContacts();
                 
-                // Pilih kontak pertama jika belum ada yang dipilih
                 if (!currentContactId) {
                     const role = localStorage.getItem('userRole');
                     let firstContact = null;
@@ -2715,12 +2838,7 @@
                         currentContactId = firstContact.id;
                         const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContactId}"]`);
                         if (activeContact) activeContact.classList.add('active');
-                        // Pasang listener untuk kontak pertama
-                        listenToMessages(currentContactId);
                     }
-                } else {
-                    // Jika sudah ada contactId, pastikan listener aktif
-                    listenToMessages(currentContactId);
                 }
                 
                 if (currentContactId) {
@@ -2849,8 +2967,10 @@
             const savedEmail = localStorage.getItem('userEmail');
             
             loadUsersFromFirebase();
+            loadMessagesFromFirebase();
             loadArticlesFromFirebase();
             loadAppointmentsFromFirebase();
+            setupMessagesListener();
             
             if (savedRole && savedName) {
                 userNameDisplay.textContent = savedName;
