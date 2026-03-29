@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>BK Mandapo · Sistem Bimbingan Konseling</title>
-    <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Google Material Symbols -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,1" />
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -147,7 +144,6 @@
             color: #153b3b;
         }
 
-        /* Google Sign In Button */
         .google-login-container {
             margin-top: 1.5rem;
             border-top: 1px solid #e0f2ef;
@@ -208,7 +204,6 @@
             font-size: 1.5rem;
         }
       
-        /* ===== MODAL GURU ===== */
         #guruSelectionModal {
             display: none;
             position: fixed;
@@ -257,7 +252,6 @@
             cursor: pointer;
         }
       
-        /* ===== NAVBAR ===== */
         .navbar-container {
             width: 100%;
             max-width: 1280px;
@@ -452,7 +446,6 @@
             color: #009688;
         }
       
-        /* ===== MAIN CONTENT ===== */
         .main-wrapper {
             max-width: 1280px;
             width: 100%;
@@ -1496,7 +1489,6 @@
     </style>
 </head>
 <body>
-    <!-- ===== LOGIN PAGE ===== -->
     <div id="loginPage" class="login-container" style="display: flex;">
         <div class="login-card">
             <div class="login-logo">
@@ -1524,7 +1516,6 @@
         </div>
     </div>
 
-    <!-- ===== MODAL PILIH GURU ===== -->
     <div id="guruSelectionModal">
         <div class="guru-modal-content">
             <h3>Pilih Akun Guru BK</h3>
@@ -1533,7 +1524,6 @@
         </div>
     </div>
 
-    <!-- ===== NAVBAR ===== -->
     <div class="navbar-container" id="navbarContainer" style="display: none;">
         <div class="navbar-wrapper">
             <div class="top-nav" id="topNav">
@@ -1559,10 +1549,8 @@
         </div>
     </div>
 
-    <!-- ===== MAIN CONTENT ===== -->
     <div class="main-wrapper" id="mainWrapper">
         <div class="main-content" id="mainContent">
-            <!-- Halaman Beranda -->
             <div id="homeSections" class="home-section">
                 <section id="chat" data-section="chat">
                     <div class="services-section">
@@ -1594,7 +1582,6 @@
                     </div>
                 </section>
             </div>
-            <!-- Halaman Artikel -->
             <div id="artikelPage" class="artikel-page">
                 <div class="artikel-container">
                     <div class="artikel-header">
@@ -1604,7 +1591,6 @@
                     <div class="artikel-grid-full" id="artikelGridFull"></div>
                 </div>
             </div>
-            <!-- Halaman Semua Jadwal Temu -->
             <div id="semuaJanjianPage" class="semua-janjian-page">
                 <div class="semua-janjian-container">
                     <div class="semua-janjian-header">
@@ -1614,7 +1600,6 @@
                     <div class="semua-janjian-list" id="semuaJanjianList"></div>
                 </div>
             </div>
-            <!-- Halaman Notes -->
             <div id="notesPage" class="notes-page">
                 <div class="notes-container">
                     <div class="notes-header">
@@ -1636,7 +1621,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Halaman Jadwal Temu (Editor) -->
             <div id="janjianPage" class="janjian-page">
                 <div class="janjian-container">
                     <div class="janjian-header">
@@ -1671,7 +1655,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Halaman Detail -->
             <div id="detailPage" class="detail-page">
                 <div class="detail-container">
                     <div class="detail-header">
@@ -1683,7 +1666,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Halaman Chat -->
             <div id="chatPage" class="chat-page">
                 <div class="chat-container">
                     <div class="chat-header">
@@ -1717,7 +1699,6 @@
         </div>
     </div>
 
-    <!-- ===== FOOTER ===== -->
     <div class="footer-container" id="footerContainer">
         <div class="footer-wrapper">
             <div class="bottom-utility" id="bottomUtility">
@@ -1728,7 +1709,6 @@
 
     <script>
         (function() {
-            // ===== FIREBASE CONFIGURATION =====
             const firebaseConfig = {
                 apiKey: "AIzaSyB0NB7Vbk1t3MaiGQAdXxgHma-M2r5XRwM",
                 authDomain: "bk-man2ponorogo-sch.firebaseapp.com",
@@ -1738,12 +1718,10 @@
                 appId: "1:541941044182:web:59904604505431abfa0a77"
             };
 
-            // Initialize Firebase
             firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             const db = firebase.firestore();
 
-            // ===== SYNC FUNCTIONS =====
             function showSyncIndicator(message, isError = false) {
                 const existing = document.querySelector('.sync-indicator');
                 if (existing) existing.remove();
@@ -1760,7 +1738,6 @@
                 }, 2000);
             }
 
-            // ===== DATA COLLECTIONS =====
             const collections = {
                 users: db.collection('users'),
                 messages: db.collection('messages'),
@@ -1768,14 +1745,12 @@
                 appointments: db.collection('appointments')
             };
 
-            // ===== GURU LIST =====
             const guruList = [
                 { id: 'pak_heri', name: 'Pak Heri', email: 'pak.heri@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' },
                 { id: 'bu_yuli', name: 'Bu Yuli', email: 'bu.yuli@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' },
                 { id: 'bu_reni', name: 'Bu Reni', email: 'bu.reni@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' }
             ];
 
-            // ===== ELEMENTS =====
             const loginPage = document.getElementById('loginPage');
             const navbarContainer = document.getElementById('navbarContainer');
             const mainWrapper = document.getElementById('mainWrapper');
@@ -1831,7 +1806,6 @@
             const toggleSidebarBtn = document.getElementById('toggleChatSidebar');
             const chatSidebar = document.getElementById('chatSidebar');
           
-            // State variables
             let currentUserRole = null;
             let currentUser = null;
             let contacts = [];
@@ -1840,7 +1814,6 @@
             let usersList = [];
             let messagesUnsubscribe = null;
             
-            // ===== PERSISTENCE KEYS =====
             const PAGE_STATE_KEY = 'bk_page_state';
             const HOME_SCROLL_KEY = 'bk_home_scroll';
             const NOTES_SCROLL_KEY = 'bk_notes_scroll';
@@ -1854,7 +1827,6 @@
             const JANJIAN_FORM_KEY = 'bk_janjian_form';
             const CHAT_DRAFT_PREFIX = 'bk_chat_draft_';
             
-            // ===== FIREBASE DATA LOADING =====
             async function loadUsersFromFirebase() {
                 try {
                     const snapshot = await collections.users.get();
@@ -1882,7 +1854,6 @@
                 }
             }
 
-            // ===== REAL-TIME MESSAGES LISTENER =====
             function setupMessagesListener() {
                 if (messagesUnsubscribe) {
                     messagesUnsubscribe();
@@ -1896,21 +1867,14 @@
                         const newMessages = change.doc.data().messages || [];
                         const oldMessages = messages[contactId] || [];
                         
-                        if (oldMessages.length !== newMessages.length) {
+                        if (JSON.stringify(oldMessages) !== JSON.stringify(newMessages)) {
                             hasChanges = true;
                             messages[contactId] = newMessages;
-                        } else {
-                            for (let i = 0; i < newMessages.length; i++) {
-                                if (JSON.stringify(oldMessages[i]) !== JSON.stringify(newMessages[i])) {
-                                    hasChanges = true;
-                                    messages[contactId] = newMessages;
-                                    break;
-                                }
-                            }
                         }
                     });
                     
                     if (hasChanges) {
+                        console.log('Messages updated from Firestore');
                         if (chatPage.classList.contains('show') && currentContactId) {
                             renderMessages();
                         }
@@ -2013,19 +1977,6 @@
                 }
             }
 
-            async function saveMessagesToFirebase() {
-                try {
-                    for (const [contactId, messageList] of Object.entries(messages)) {
-                        await collections.messages.doc(contactId).set({
-                            messages: messageList,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        }, { merge: true });
-                    }
-                } catch (error) {
-                    console.error('Error saving messages:', error);
-                }
-            }
-
             async function saveArticleToFirebase(article) {
                 try {
                     await collections.articles.add({
@@ -2110,7 +2061,6 @@
                 });
             }
 
-            // ===== RENDER FUNCTIONS =====
             function renderArticles(articles) {
                 articleGrid.innerHTML = '';
                 artikelGridFull.innerHTML = '';
@@ -2298,7 +2248,6 @@
                     .replace(/'/g, '&#39;');
             }
             
-            // ===== GOOGLE SIGN IN =====
             async function handleGoogleSignIn() {
                 try {
                     const provider = new firebase.auth.GoogleAuthProvider();
@@ -2421,7 +2370,6 @@
                 showMainApp();
             }
             
-            // ===== PAGE SWITCHING =====
             function scrollToTop() {
                 window.scrollTo({ top: 0, behavior: 'instant' });
             }
@@ -2471,7 +2419,6 @@
                 scrollToTop();
             }
             
-            // ===== CHAT FUNCTIONS =====
             function renderContacts(filter = '') {
                 chatContacts.innerHTML = '';
                 
@@ -2619,7 +2566,6 @@
                 updateNotificationBadges();
             }
           
-            // PERBAIKAN UTAMA: Fungsi sendChatMessage tanpa timestamp di array
             function sendChatMessage() {
                 const message = chatInput.value.trim();
                 if (message === '') return;
@@ -2643,14 +2589,15 @@
                 const now = new Date();
                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 
-                // HAPUS timestamp dari objek pesan karena FieldValue.serverTimestamp() tidak bisa di dalam array
+                // Penting: Pesan disimpan dengan struktur yang sama untuk kedua pengguna
                 const newMessage = {
                     type: 'sent',
                     text: message,
                     time: timeString,
                     read: false,
                     senderId: currentUser.uid,
-                    senderEmail: currentUser.email
+                    senderEmail: currentUser.email,
+                    senderName: currentUser.displayName || currentUser.email.split('@')[0]
                 };
               
                 if (!messages[currentContactId]) messages[currentContactId] = [];
@@ -2661,13 +2608,17 @@
                 
                 const messageRef = collections.messages.doc(currentContactId);
                 
+                // Ambil data yang sudah ada atau buat array baru
                 messageRef.get().then(doc => {
-                    const existingMessages = doc.exists ? doc.data().messages || [] : [];
+                    let existingMessages = [];
+                    if (doc.exists && doc.data().messages) {
+                        existingMessages = doc.data().messages;
+                    }
                     existingMessages.push(newMessage);
                     return messageRef.set({ messages: existingMessages }, { merge: true });
                 })
                 .then(() => {
-                    console.log('Message sent successfully');
+                    console.log('Message sent successfully to contact:', currentContactId);
                     showSyncIndicator('Pesan terkirim');
                 })
                 .catch(error => {
@@ -2685,7 +2636,6 @@
                 chatInput.value = draft;
             }
             
-            // ===== PAGE STATE & SCROLL =====
             let homeScrollY = parseInt(localStorage.getItem(HOME_SCROLL_KEY)) || 0;
             let notesScrollY = parseInt(localStorage.getItem(NOTES_SCROLL_KEY)) || 0;
             let detailScrollY = parseInt(localStorage.getItem(DETAIL_SCROLL_KEY)) || 0;
@@ -2919,21 +2869,18 @@
                 input.focus();
             }
             
-            // ===== TOGGLE SIDEBAR CHAT =====
             if (toggleSidebarBtn && chatSidebar) {
                 toggleSidebarBtn.addEventListener('click', function() {
                     chatSidebar.classList.toggle('hidden');
                 });
             }
             
-            // ===== CHAT SEARCH =====
             if (chatSearch) {
                 chatSearch.addEventListener('input', function(e) {
                     renderContacts(e.target.value);
                 });
             }
             
-            // ===== CHAT SEND & DRAFT =====
             if (sendChatBtn) {
                 sendChatBtn.addEventListener('click', sendChatMessage);
             }
@@ -2951,7 +2898,6 @@
                 });
             }
             
-            // ===== LOGIN HANDLERS =====
             function handleLogin(role) {
                 currentUserRole = role;
                 handleGoogleSignIn();
@@ -2961,7 +2907,6 @@
             document.getElementById('loginSiswa').addEventListener('click', () => handleLogin('siswa'));
             document.getElementById('googleSignInBtn').addEventListener('click', () => handleLogin('siswa'));
             
-            // ===== INIT =====
             const savedRole = localStorage.getItem('userRole');
             const savedName = localStorage.getItem('userDisplayName');
             const savedEmail = localStorage.getItem('userEmail');
@@ -2994,7 +2939,6 @@
             
             setupDatePickerOnClick();
             
-            // ===== SETUP JANJIAN FORM PERSISTENCE =====
             if (janjianUsername && janjianDate && janjianStartTime && janjianEndTime) {
                 const saveFormToLocal = () => {
                     const formData = {
@@ -3013,7 +2957,6 @@
             
             if (logoutIcon) logoutIcon.addEventListener('click', handleLogout);
             
-            // Menu items
             if (menuArtikel) {
                 menuArtikel.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -3033,7 +2976,6 @@
                 });
             }
             
-            // Back buttons
             if (backButton) backButton.addEventListener('click', () => showHomePage());
             if (backFromDetail) backFromDetail.addEventListener('click', () => showHomePage());
             if (backFromArtikel) backFromArtikel.addEventListener('click', () => showHomePage());
@@ -3041,12 +2983,10 @@
             if (backFromJanjian) backFromJanjian.addEventListener('click', () => showHomePage());
             if (backFromSemuaJanjian) backFromSemuaJanjian.addEventListener('click', () => showHomePage());
             
-            // Service chat
             document.querySelectorAll('.service-item[data-service="chat"]').forEach(item => {
                 item.addEventListener('click', () => { showChatPage(); });
             });
             
-            // Add box menu
             const addBoxIcon = document.getElementById('addBoxIcon');
             const addMenu = document.getElementById('addMenu');
             if (addBoxIcon && addMenu) {
@@ -3058,13 +2998,11 @@
                 });
             }
             
-            // Links
             const moreArticles = document.getElementById('moreArticles');
             if (moreArticles) moreArticles.addEventListener('click', (e) => { e.preventDefault(); showArtikelPage(); });
             const janjianLink = document.getElementById('janjianLink');
             if (janjianLink) janjianLink.addEventListener('click', (e) => { e.preventDefault(); showSemuaJanjianPage(); });
             
-            // Send article
             if (sendButton) {
                 sendButton.addEventListener('click', () => {
                     const title = noteTitle.value.trim();
@@ -3081,7 +3019,6 @@
                 });
             }
             
-            // Save janjian
             if (saveJanjianBtn) {
                 saveJanjianBtn.addEventListener('click', () => {
                     const nama = janjianUsername.value.trim();
