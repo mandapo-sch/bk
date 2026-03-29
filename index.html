@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
+        /* ===== RESET & BASE ===== */
         * {
             margin: 0;
             padding: 0;
@@ -1640,9 +1641,53 @@
             let usersList = [];
             let messagesUnsubscribe = null;
             
+            // KEYS untuk menyimpan state di localStorage
+            const STORAGE_KEYS = {
+                CURRENT_CONTACT_ID: 'bk_current_contact_id',
+                CURRENT_CONTACT_NAME: 'bk_current_contact_name',
+                CURRENT_CONTACT_EMAIL: 'bk_current_contact_email',
+                CURRENT_CONTACT_AVATAR: 'bk_current_contact_avatar',
+                CURRENT_CONTACT_IS_GURU: 'bk_current_contact_is_guru',
+                CURRENT_CONTACT_IS_STUDENT: 'bk_current_contact_is_student',
+                USER_DOC_ID: 'bk_user_doc_id',
+                PAGE_STATE: 'bk_page_state'
+            };
+            
             function getChatRoomId(userId1, userId2) {
                 const ids = [userId1, userId2].sort();
                 return `${ids[0]}_${ids[1]}`;
+            }
+            
+            // Fungsi untuk menyimpan kontak yang sedang dipilih ke localStorage
+            function saveCurrentContactToStorage(contact) {
+                if (contact) {
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_ID, contact.id);
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_NAME, contact.name);
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_EMAIL, contact.email || '');
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_AVATAR, contact.avatar);
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_IS_GURU, contact.isGuru ? 'true' : 'false');
+                    localStorage.setItem(STORAGE_KEYS.CURRENT_CONTACT_IS_STUDENT, contact.isStudent ? 'true' : 'false');
+                } else {
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_ID);
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_NAME);
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_EMAIL);
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_AVATAR);
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_IS_GURU);
+                    localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_IS_STUDENT);
+                }
+            }
+            
+            // Fungsi untuk memuat kontak yang dipilih dari localStorage
+            function loadCurrentContactFromStorage() {
+                const contactId = localStorage.getItem(STORAGE_KEYS.CURRENT_CONTACT_ID);
+                if (contactId && contacts.length > 0) {
+                    const contact = contacts.find(c => c.id === contactId);
+                    if (contact) {
+                        currentContact = contact;
+                        return true;
+                    }
+                }
+                return false;
             }
             
             const PAGE_STATE_KEY = 'bk_page_state';
@@ -1792,10 +1837,12 @@
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                         });
                         currentUserDocId = docRef.id;
+                        localStorage.setItem(STORAGE_KEYS.USER_DOC_ID, currentUserDocId);
                         showSyncIndicator(`${userData.role === 'guru' ? 'Guru' : 'Siswa'} ditambahkan`);
                     } else {
                         const docId = existing.docs[0].id;
                         currentUserDocId = docId;
+                        localStorage.setItem(STORAGE_KEYS.USER_DOC_ID, currentUserDocId);
                         const updateData = {
                             name: userData.name,
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
@@ -1892,6 +1939,16 @@
                 });
 
                 console.log('Contacts rebuilt:', contacts);
+                
+                // Coba muat kontak yang tersimpan setelah contacts di-rebuild
+                if (chatPage.classList.contains('show')) {
+                    const loaded = loadCurrentContactFromStorage();
+                    if (loaded) {
+                        renderContacts();
+                        renderMessages();
+                        if (chatInputArea) chatInputArea.style.display = 'flex';
+                    }
+                }
             }
 
             function renderArticles(articles) {
@@ -2112,6 +2169,7 @@
                     } else {
                         const doc = snapshot.docs[0];
                         currentUserDocId = doc.id;
+                        localStorage.setItem(STORAGE_KEYS.USER_DOC_ID, currentUserDocId);
                         const userData = doc.data();
                         const role = userData.role;
                         currentUserRole = role;
@@ -2152,6 +2210,7 @@
                             if (!snapshot.empty) {
                                 const docId = snapshot.docs[0].id;
                                 currentUserDocId = docId;
+                                localStorage.setItem(STORAGE_KEYS.USER_DOC_ID, currentUserDocId);
                                 await collections.users.doc(docId).update({
                                     guruId: guru.id,
                                     name: guru.name,
@@ -2225,7 +2284,13 @@
                     if (addBoxIcon) addBoxIcon.classList.add('siswa-hidden');
                 }
                 
-                showHomePage();
+                // Cek apakah ada state halaman yang tersimpan
+                const savedPageState = localStorage.getItem(PAGE_STATE_KEY);
+                if (savedPageState === 'chat') {
+                    showChatPage();
+                } else {
+                    showHomePage();
+                }
                 scrollToTop();
             }
             
@@ -2240,9 +2305,12 @@
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('selectedGuru');
+                localStorage.removeItem(STORAGE_KEYS.CURRENT_CONTACT_ID);
+                localStorage.removeItem(STORAGE_KEYS.USER_DOC_ID);
                 localStorage.removeItem(LAST_DETAIL_TITLE_KEY);
                 localStorage.removeItem(LAST_DETAIL_CONTENT_KEY);
                 localStorage.removeItem(JANJIAN_FORM_KEY);
+                localStorage.removeItem(PAGE_STATE_KEY);
                 
                 auth.signOut().catch(console.error);
                 
@@ -2288,6 +2356,7 @@
                         document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
                         contactEl.classList.add('active');
                         currentContact = contact;
+                        saveCurrentContactToStorage(contact);
                         renderMessages();
                         loadChatDraft();
                         if (chatInputArea) chatInputArea.style.display = 'flex';
@@ -2428,8 +2497,14 @@
                 }
                 
                 if (!currentUserDocId) {
-                    alert('Data pengguna belum siap. Silakan coba lagi.');
-                    return;
+                    // Coba muat dari localStorage
+                    const savedDocId = localStorage.getItem(STORAGE_KEYS.USER_DOC_ID);
+                    if (savedDocId) {
+                        currentUserDocId = savedDocId;
+                    } else {
+                        alert('Data pengguna belum siap. Silakan coba lagi.');
+                        return;
+                    }
                 }
                 
                 if (!navigator.onLine) {
@@ -2522,7 +2597,9 @@
             
             window.addEventListener('scroll', () => { saveScrollPosition(); });
             
-            function savePageState(page) { localStorage.setItem(PAGE_STATE_KEY, page); }
+            function savePageState(page) { 
+                localStorage.setItem(PAGE_STATE_KEY, page); 
+            }
             
             function showHomePage() {
                 saveScrollPosition();
@@ -2626,19 +2703,29 @@
                 
                 renderContacts();
                 
+                // Coba muat kontak yang tersimpan jika belum ada kontak yang dipilih
                 if (!currentContact) {
-                    const role = localStorage.getItem('userRole');
-                    let firstContact = null;
-                    if (role === 'guru') {
-                        firstContact = contacts.find(c => c.isStudent);
-                    } else if (role === 'siswa') {
-                        firstContact = contacts.find(c => c.isGuru);
-                    }
-                    
-                    if (firstContact) {
-                        currentContact = firstContact;
+                    const loaded = loadCurrentContactFromStorage();
+                    if (loaded) {
+                        // Highlight kontak yang aktif
                         const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContact.id}"]`);
                         if (activeContact) activeContact.classList.add('active');
+                    } else {
+                        // Jika tidak ada kontak tersimpan, pilih kontak pertama
+                        const role = localStorage.getItem('userRole');
+                        let firstContact = null;
+                        if (role === 'guru') {
+                            firstContact = contacts.find(c => c.isStudent);
+                        } else if (role === 'siswa') {
+                            firstContact = contacts.find(c => c.isGuru);
+                        }
+                        
+                        if (firstContact) {
+                            currentContact = firstContact;
+                            saveCurrentContactToStorage(currentContact);
+                            const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContact.id}"]`);
+                            if (activeContact) activeContact.classList.add('active');
+                        }
                     }
                 }
                 
@@ -2757,6 +2844,12 @@
             document.getElementById('loginGuru').addEventListener('click', () => handleLogin('guru'));
             document.getElementById('loginSiswa').addEventListener('click', () => handleLogin('siswa'));
             document.getElementById('googleSignInBtn').addEventListener('click', () => handleLogin('siswa'));
+            
+            // Muat userDocId dari localStorage jika ada
+            const savedUserDocId = localStorage.getItem(STORAGE_KEYS.USER_DOC_ID);
+            if (savedUserDocId) {
+                currentUserDocId = savedUserDocId;
+            }
             
             const savedRole = localStorage.getItem('userRole');
             const savedName = localStorage.getItem('userDisplayName');
