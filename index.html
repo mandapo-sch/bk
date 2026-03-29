@@ -1808,11 +1808,19 @@
           
             let currentUserRole = null;
             let currentUser = null;
+            let currentUserDocId = null; // ID dokumen user di Firestore
             let contacts = [];
             let messages = {};
-            let currentContactId = null;
+            let currentContact = null; // Simpan objek kontak, bukan hanya ID
             let usersList = [];
             let messagesUnsubscribe = null;
+            
+            // Helper function untuk membuat chat room ID yang konsisten
+            function getChatRoomId(userId1, userId2) {
+                // Urutkan ID agar selalu sama untuk pasangan yang sama
+                const ids = [userId1, userId2].sort();
+                return `${ids[0]}_${ids[1]}`;
+            }
             
             const PAGE_STATE_KEY = 'bk_page_state';
             const HOME_SCROLL_KEY = 'bk_home_scroll';
@@ -1849,6 +1857,7 @@
                         const data = doc.data();
                         messages[doc.id] = data.messages || [];
                     });
+                    console.log('Messages loaded:', messages);
                 } catch (error) {
                     console.error('Error loading messages:', error);
                 }
@@ -1863,19 +1872,19 @@
                     let hasChanges = false;
                     
                     snapshot.docChanges().forEach((change) => {
-                        const contactId = change.doc.id;
+                        const roomId = change.doc.id;
                         const newMessages = change.doc.data().messages || [];
-                        const oldMessages = messages[contactId] || [];
+                        const oldMessages = messages[roomId] || [];
                         
                         if (JSON.stringify(oldMessages) !== JSON.stringify(newMessages)) {
                             hasChanges = true;
-                            messages[contactId] = newMessages;
+                            messages[roomId] = newMessages;
+                            console.log(`Messages updated for room: ${roomId}`);
                         }
                     });
                     
                     if (hasChanges) {
-                        console.log('Messages updated from Firestore');
-                        if (chatPage.classList.contains('show') && currentContactId) {
+                        if (chatPage.classList.contains('show') && currentContact) {
                             renderMessages();
                         }
                         updateNotificationBadges();
@@ -1888,18 +1897,20 @@
             
             function updateNotificationBadges() {
                 const role = localStorage.getItem('userRole');
-                let contactsToCheck = [];
+                let contactsToShow = [];
                 
                 if (role === 'guru') {
-                    contactsToCheck = contacts.filter(c => c.isStudent);
+                    contactsToShow = contacts.filter(c => c.isStudent);
                 } else {
-                    contactsToCheck = contacts.filter(c => c.isGuru);
+                    contactsToShow = contacts.filter(c => c.isGuru);
                 }
                 
-                contactsToCheck.forEach(contact => {
-                    const contactMessages = messages[contact.id] || [];
+                contactsToShow.forEach(contact => {
+                    if (!currentUserDocId) return;
+                    const roomId = getChatRoomId(currentUserDocId, contact.id);
+                    const contactMessages = messages[roomId] || [];
                     const unreadCount = contactMessages.filter(msg => {
-                        return msg.type === 'received' && !msg.read;
+                        return msg.type === 'received' && !msg.read && msg.senderId !== currentUserDocId;
                     }).length;
                     
                     const contactElement = document.querySelector(`.chat-contact[data-contact-id="${contact.id}"]`);
@@ -1950,7 +1961,7 @@
                 try {
                     const existing = await collections.users.where('email', '==', userData.email).get();
                     if (existing.empty) {
-                        await collections.users.add({
+                        const docRef = await collections.users.add({
                             name: userData.name,
                             email: userData.email,
                             role: userData.role,
@@ -1958,9 +1969,11 @@
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                         });
+                        currentUserDocId = docRef.id;
                         showSyncIndicator(`${userData.role === 'guru' ? 'Guru' : 'Siswa'} ditambahkan`);
                     } else {
                         const docId = existing.docs[0].id;
+                        currentUserDocId = docId;
                         const updateData = {
                             name: userData.name,
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
@@ -2056,9 +2069,7 @@
                     });
                 });
 
-                contacts.forEach(contact => {
-                    if (!messages[contact.id]) messages[contact.id] = [];
-                });
+                console.log('Contacts rebuilt:', contacts);
             }
 
             function renderArticles(articles) {
@@ -2278,6 +2289,7 @@
                         }
                     } else {
                         const userData = snapshot.docs[0].data();
+                        currentUserDocId = snapshot.docs[0].id;
                         const role = userData.role;
                         currentUserRole = role;
                         
@@ -2316,6 +2328,7 @@
                             const snapshot = await collections.users.where('email', '==', currentUser.email).get();
                             if (!snapshot.empty) {
                                 const docId = snapshot.docs[0].id;
+                                currentUserDocId = docId;
                                 await collections.users.doc(docId).update({
                                     guruId: guru.id,
                                     name: guru.name,
@@ -2438,7 +2451,7 @@
               
                 filteredContacts.forEach(contact => {
                     const contactEl = document.createElement('div');
-                    contactEl.className = `chat-contact ${contact.id === currentContactId ? 'active' : ''}`;
+                    contactEl.className = `chat-contact ${currentContact && currentContact.id === contact.id ? 'active' : ''}`;
                     contactEl.dataset.contactId = contact.id;
                     contactEl.innerHTML = `
                         <div class="contact-avatar"><i class="${contact.avatar}"></i></div>
@@ -2451,7 +2464,7 @@
                     contactEl.addEventListener('click', () => {
                         document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
                         contactEl.classList.add('active');
-                        currentContactId = contact.id;
+                        currentContact = contact;
                         renderMessages();
                         loadChatDraft();
                         if (chatInputArea) chatInputArea.style.display = 'flex';
@@ -2481,7 +2494,9 @@
                 
                 menu.querySelector('[data-action="copy"]').addEventListener('click', () => {
                     menu.classList.remove('show');
-                    const msgText = messages[currentContactId]?.[messageIndex]?.text || '';
+                    if (!currentContact || !currentUserDocId) return;
+                    const roomId = getChatRoomId(currentUserDocId, currentContact.id);
+                    const msgText = messages[roomId]?.[messageIndex]?.text || '';
                     navigator.clipboard.writeText(msgText).then(() => {
                         showSyncIndicator('Pesan disalin');
                     }).catch(() => {
@@ -2492,9 +2507,11 @@
                 menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
                     menu.classList.remove('show');
                     if (confirm('Hapus pesan ini?')) {
-                        messages[currentContactId].splice(messageIndex, 1);
+                        if (!currentContact || !currentUserDocId) return;
+                        const roomId = getChatRoomId(currentUserDocId, currentContact.id);
+                        messages[roomId].splice(messageIndex, 1);
                         renderMessages();
-                        collections.messages.doc(currentContactId).set({ messages: messages[currentContactId] }, { merge: true })
+                        collections.messages.doc(roomId).set({ messages: messages[roomId] }, { merge: true })
                             .then(() => showSyncIndicator('Pesan dihapus'))
                             .catch(err => console.error('Error deleting message:', err));
                     }
@@ -2504,43 +2521,49 @@
             }
           
             function renderMessages() {
-                const contactMessages = messages[currentContactId] || [];
+                if (!currentContact || !currentUserDocId) {
+                    chatMessages.innerHTML = '<div class="empty-chat-message"><i class="fas fa-comments"></i><p>Pilih kontak untuk memulai percakapan</p></div>';
+                    return;
+                }
+                
+                const roomId = getChatRoomId(currentUserDocId, currentContact.id);
+                const contactMessages = messages[roomId] || [];
                 chatMessages.innerHTML = '';
                 
                 let hasUnread = false;
                 contactMessages.forEach(msg => {
-                    if (msg.type === 'received' && !msg.read) {
+                    if (msg.type === 'received' && !msg.read && msg.senderId !== currentUserDocId) {
                         msg.read = true;
                         hasUnread = true;
                     }
                 });
                 
-                if (hasUnread && currentContactId) {
-                    collections.messages.doc(currentContactId).set({ messages: contactMessages }, { merge: true });
+                if (hasUnread && roomId) {
+                    collections.messages.doc(roomId).set({ messages: contactMessages }, { merge: true });
                 }
               
                 if (contactMessages.length === 0) {
-                    const contact = contacts.find(c => c.id === currentContactId);
                     chatMessages.innerHTML = `
                         <div class="empty-chat-message">
                             <i class="fas fa-comments"></i>
-                            <p>Mulai percakapan dengan ${contact ? escapeHtml(contact.name) : 'kontak'}</p>
+                            <p>Mulai percakapan dengan ${escapeHtml(currentContact.name)}</p>
                         </div>
                     `;
                 } else {
                     contactMessages.forEach((msg, index) => {
-                        const messageId = `msg-${currentContactId}-${index}`;
+                        const isSent = msg.senderId === currentUserDocId;
+                        const messageId = `msg-${roomId}-${index}`;
                         const messageWrapper = document.createElement('div');
-                        messageWrapper.className = `message-wrapper ${msg.type}`;
+                        messageWrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
                       
                         const messageDiv = document.createElement('div');
-                        messageDiv.className = `message ${msg.type}`;
+                        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
                         messageDiv.innerHTML = `
                             <div class="message-text">${escapeHtml(msg.text)}</div>
                             <div class="message-time">${msg.time}</div>
                         `;
                         
-                        if (msg.type === 'sent') {
+                        if (isSent) {
                             const dotsSpan = document.createElement('span');
                             dotsSpan.className = 'message-menu-dots material-symbols-outlined';
                             dotsSpan.textContent = 'more_vert';
@@ -2576,8 +2599,13 @@
                     return;
                 }
                 
-                if (!currentContactId) {
+                if (!currentContact) {
                     alert('Pilih kontak terlebih dahulu');
+                    return;
+                }
+                
+                if (!currentUserDocId) {
+                    alert('Data pengguna belum siap. Silakan coba lagi.');
                     return;
                 }
                 
@@ -2589,26 +2617,27 @@
                 const now = new Date();
                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 
-                // Penting: Pesan disimpan dengan struktur yang sama untuk kedua pengguna
+                // Buat chat room ID yang konsisten untuk kedua pengguna
+                const roomId = getChatRoomId(currentUserDocId, currentContact.id);
+                
                 const newMessage = {
                     type: 'sent',
                     text: message,
                     time: timeString,
                     read: false,
-                    senderId: currentUser.uid,
+                    senderId: currentUserDocId,
                     senderEmail: currentUser.email,
                     senderName: currentUser.displayName || currentUser.email.split('@')[0]
                 };
               
-                if (!messages[currentContactId]) messages[currentContactId] = [];
-                messages[currentContactId].push(newMessage);
+                if (!messages[roomId]) messages[roomId] = [];
+                messages[roomId].push(newMessage);
                 renderMessages();
                 chatInput.value = '';
-                if (currentContactId) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContactId);
+                if (currentContact.id) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContact.id);
                 
-                const messageRef = collections.messages.doc(currentContactId);
+                const messageRef = collections.messages.doc(roomId);
                 
-                // Ambil data yang sudah ada atau buat array baru
                 messageRef.get().then(doc => {
                     let existingMessages = [];
                     if (doc.exists && doc.data().messages) {
@@ -2618,20 +2647,20 @@
                     return messageRef.set({ messages: existingMessages }, { merge: true });
                 })
                 .then(() => {
-                    console.log('Message sent successfully to contact:', currentContactId);
+                    console.log('Message sent successfully to room:', roomId);
                     showSyncIndicator('Pesan terkirim');
                 })
                 .catch(error => {
                     console.error('Error sending message:', error);
                     showSyncIndicator('Gagal mengirim pesan: ' + (error.message || 'Unknown error'), true);
-                    messages[currentContactId].pop();
+                    messages[roomId].pop();
                     renderMessages();
                 });
             }
 
             function loadChatDraft() {
-                if (!chatInput || !currentContactId) return;
-                const draftKey = CHAT_DRAFT_PREFIX + currentContactId;
+                if (!chatInput || !currentContact) return;
+                const draftKey = CHAT_DRAFT_PREFIX + currentContact.id;
                 const draft = localStorage.getItem(draftKey) || '';
                 chatInput.value = draft;
             }
@@ -2775,7 +2804,7 @@
                 
                 renderContacts();
                 
-                if (!currentContactId) {
+                if (!currentContact) {
                     const role = localStorage.getItem('userRole');
                     let firstContact = null;
                     if (role === 'guru') {
@@ -2785,13 +2814,13 @@
                     }
                     
                     if (firstContact) {
-                        currentContactId = firstContact.id;
-                        const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContactId}"]`);
+                        currentContact = firstContact;
+                        const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContact.id}"]`);
                         if (activeContact) activeContact.classList.add('active');
                     }
                 }
                 
-                if (currentContactId) {
+                if (currentContact) {
                     renderMessages();
                     loadChatDraft();
                     if (chatInputArea) chatInputArea.style.display = 'flex';
@@ -2892,8 +2921,8 @@
                     }
                 });
                 chatInput.addEventListener('input', () => {
-                    if (currentContactId) {
-                        localStorage.setItem(CHAT_DRAFT_PREFIX + currentContactId, chatInput.value);
+                    if (currentContact) {
+                        localStorage.setItem(CHAT_DRAFT_PREFIX + currentContact.id, chatInput.value);
                     }
                 });
             }
