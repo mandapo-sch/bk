@@ -1756,7 +1756,7 @@
                 
                 setTimeout(() => {
                     indicator.classList.add('fade-out');
-                    setTimeout(() => indicator.remove(), 300);
+                    setTimeout(() => indicator.remove(), 2000);
                 }, 2000);
             }
 
@@ -2619,6 +2619,7 @@
                 updateNotificationBadges();
             }
           
+            // PERBAIKAN UTAMA: Fungsi sendChatMessage tanpa timestamp di array
             function sendChatMessage() {
                 const message = chatInput.value.trim();
                 if (message === '') return;
@@ -2641,13 +2642,12 @@
               
                 const now = new Date();
                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                const timestamp = firebase.firestore.FieldValue.serverTimestamp();
                 
+                // HAPUS timestamp dari objek pesan karena FieldValue.serverTimestamp() tidak bisa di dalam array
                 const newMessage = {
                     type: 'sent',
                     text: message,
                     time: timeString,
-                    timestamp: timestamp,
                     read: false,
                     senderId: currentUser.uid,
                     senderEmail: currentUser.email
