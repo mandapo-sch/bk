@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>BK Mandapo · Login dengan Google</title>
+    <title>BK Mandapo · Sistem Bimbingan Konseling</title>
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Google Material Symbols -->
@@ -206,6 +206,55 @@
         .back-button i {
             color: #009688;
             font-size: 1.5rem;
+        }
+      
+        /* ===== MODAL GURU ===== */
+        #guruSelectionModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .guru-modal-content {
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .guru-modal-content h3 {
+            margin-bottom: 1.5rem;
+            color: #1e3a3a;
+        }
+        .guru-option-btn {
+            background: #f0fbf9;
+            border: 1px solid #009688;
+            padding: 0.75rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .guru-option-btn:hover {
+            background: #009688;
+            color: white;
+        }
+        #closeGuruModal {
+            margin-top: 1.5rem;
+            background: #e0f2ef;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
         }
       
         /* ===== NAVBAR ===== */
@@ -1464,6 +1513,15 @@
         </div>
     </div>
 
+    <!-- ===== MODAL PILIH GURU ===== -->
+    <div id="guruSelectionModal">
+        <div class="guru-modal-content">
+            <h3>Pilih Akun Guru BK</h3>
+            <div id="guruOptions"></div>
+            <button id="closeGuruModal">Batal</button>
+        </div>
+    </div>
+
     <!-- ===== NAVBAR ===== -->
     <div class="navbar-container" id="navbarContainer" style="display: none;">
         <div class="navbar-wrapper">
@@ -1661,13 +1719,13 @@
         (function() {
             // ===== FIREBASE CONFIGURATION =====
             const firebaseConfig = {
-  apiKey: "AIzaSyB0NB7Vbk1t3MaiGQAdXxgHma-M2r5XRwM",
-  authDomain: "bk-man2ponorogo-sch.firebaseapp.com",
-  projectId: "bk-man2ponorogo-sch",
-  storageBucket: "bk-man2ponorogo-sch.firebasestorage.app",
-  messagingSenderId: "541941044182",
-  appId: "1:541941044182:web:59904604505431abfa0a77"
-};
+                apiKey: "AIzaSyB0NB7Vbk1t3MaiGQAdXxgHma-M2r5XRwM",
+                authDomain: "bk-man2ponorogo-sch.firebaseapp.com",
+                projectId: "bk-man2ponorogo-sch",
+                storageBucket: "bk-man2ponorogo-sch.firebasestorage.app",
+                messagingSenderId: "541941044182",
+                appId: "1:541941044182:web:59904604505431abfa0a77"
+            };
 
             // Initialize Firebase
             firebase.initializeApp(firebaseConfig);
@@ -1697,6 +1755,13 @@
                 articles: db.collection('articles'),
                 appointments: db.collection('appointments')
             };
+
+            // ===== GURU LIST =====
+            const guruList = [
+                { id: 'pak_heri', name: 'Pak Heri', email: 'pak.heri@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' },
+                { id: 'bu_yuli', name: 'Bu Yuli', email: 'bu.yuli@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' },
+                { id: 'bu_reni', name: 'Bu Reni', email: 'bu.reni@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher' }
+            ];
 
             // ===== ELEMENTS =====
             const loginPage = document.getElementById('loginPage');
@@ -1755,16 +1820,8 @@
             const chatSidebar = document.getElementById('chatSidebar');
           
             // State variables
-            let currentUserRole = null; // 'guru' or 'siswa'
+            let currentUserRole = null;
             let currentUser = null;
-            
-            // Guru contact list
-            const guruContacts = [
-                { id: 'guru_1', name: 'Pak Heri', email: 'pak.heri@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true },
-                { id: 'guru_2', name: 'Bu Yuli', email: 'bu.yuli@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true },
-                { id: 'guru_3', name: 'Bu Reni', email: 'bu.reni@bkman2po.sch.id', avatar: 'fas fa-chalkboard-teacher', isGuru: true }
-            ];
-            
             let contacts = [];
             let messages = {};
             let currentContactId = null;
@@ -1845,15 +1902,20 @@
                             name: userData.name,
                             email: userData.email,
                             role: userData.role,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            guruId: userData.guruId || null,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                         });
                         showSyncIndicator(`${userData.role === 'guru' ? 'Guru' : 'Siswa'} ditambahkan`);
                     } else {
                         const docId = existing.docs[0].id;
-                        await collections.users.doc(docId).update({
+                        const updateData = {
                             name: userData.name,
                             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                        };
+                        if (userData.role) updateData.role = userData.role;
+                        if (userData.guruId) updateData.guruId = userData.guruId;
+                        await collections.users.doc(docId).update(updateData);
                         showSyncIndicator('Data pengguna diperbarui');
                     }
                     await loadUsersFromFirebase();
@@ -1928,17 +1990,31 @@
             }
             
             function rebuildContacts() {
-                contacts = [...guruContacts];
-                const students = usersList.filter(u => u.role === 'siswa');
-                students.forEach((student, index) => {
+                contacts = [];
+                // Guru: semua user dengan role 'guru'
+                const guruUsers = usersList.filter(u => u.role === 'guru');
+                guruUsers.forEach(guru => {
                     contacts.push({
-                        id: student.id || `student_${index}`,
-                        name: student.name,
-                        email: student.email,
+                        id: guru.id,
+                        name: guru.name,
+                        email: guru.email,
+                        avatar: 'fas fa-chalkboard-teacher',
+                        isGuru: true
+                    });
+                });
+                // Siswa: semua user dengan role 'siswa'
+                const siswaUsers = usersList.filter(u => u.role === 'siswa');
+                siswaUsers.forEach(siswa => {
+                    contacts.push({
+                        id: siswa.id,
+                        name: siswa.name,
+                        email: siswa.email,
                         avatar: 'fas fa-user-graduate',
                         isStudent: true
                     });
                 });
+
+                // Inisialisasi messages untuk setiap kontak jika belum ada
                 contacts.forEach(contact => {
                     if (!messages[contact.id]) messages[contact.id] = [];
                 });
@@ -1973,8 +2049,8 @@
                 
                 card.innerHTML = `
                     <div class="art-icon"><span class="material-symbols-outlined">auto_stories</span></div>
-                    <h4>${article.title}</h4>
-                    <p>${article.content ? article.content.substring(0, 50) + '...' : 'Baru saja ditambahkan'}</p>
+                    <h4>${escapeHtml(article.title)}</h4>
+                    <p>${article.content ? escapeHtml(article.content.substring(0, 50)) + '...' : 'Baru saja ditambahkan'}</p>
                     <span class="card-menu-icon material-symbols-outlined">more_vert</span>
                     <div class="card-popup-menu"></div>
                 `;
@@ -2059,7 +2135,7 @@
                 card.innerHTML = `
                     <div class="jadwal-icon"><span class="material-symbols-outlined">calendar_month</span></div>
                     <div class="jadwal-details">
-                        <h4>${appointment.nama}</h4>
+                        <h4>${escapeHtml(appointment.nama)}</h4>
                         <p>
                             <span><i class="fas fa-clock"></i> ${waktu}</span>
                             <span><i class="fas fa-calendar-alt"></i> ${hariTanggal}</span>
@@ -2122,6 +2198,16 @@
                 return `${hour12}:${minute} ${ampm}`;
             }
             
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+            
             // ===== GOOGLE SIGN IN =====
             async function handleGoogleSignIn() {
                 try {
@@ -2129,47 +2215,120 @@
                     provider.setCustomParameters({ prompt: 'select_account' });
                     const result = await auth.signInWithPopup(provider);
                     const user = result.user;
-                    
                     currentUser = user;
                     
-                    // Check if user exists in Firestore
                     const snapshot = await collections.users.where('email', '==', user.email).get();
                     
                     if (snapshot.empty) {
-                        // New user - need to set role
-                        // Show role selection modal or use existing role from login options?
-                        // For now, default to 'siswa' and let user choose later
-                        const role = currentUserRole || 'siswa';
-                        await saveUserToFirebase({
-                            name: user.displayName || user.email.split('@')[0],
-                            email: user.email,
-                            role: role
-                        });
-                    }
-                    
-                    // Set user session
-                    localStorage.setItem('userDisplayName', user.displayName || user.email.split('@')[0]);
-                    localStorage.setItem('userEmail', user.email);
-                    localStorage.setItem('userRole', currentUserRole || 'siswa');
-                    localStorage.setItem('userId', user.uid);
-                    
-                    userNameDisplay.textContent = user.displayName || user.email.split('@')[0];
-                    userEmailDisplay.textContent = user.email;
-                    
-                    if (currentUserRole === 'guru') {
-                        userRole.textContent = 'Guru BK';
-                        avatarIcon.className = 'fas fa-chalkboard-teacher';
+                        const role = currentUserRole;
+                        if (role === 'guru') {
+                            await saveUserToFirebase({
+                                name: user.displayName || user.email.split('@')[0],
+                                email: user.email,
+                                role: role,
+                                guruId: null
+                            });
+                            showGuruSelection();
+                        } else {
+                            await saveUserToFirebase({
+                                name: user.displayName || user.email.split('@')[0],
+                                email: user.email,
+                                role: 'siswa'
+                            });
+                            finalizeStudentLogin(user);
+                        }
                     } else {
-                        userRole.textContent = 'Siswa';
-                        avatarIcon.className = 'fas fa-user-graduate';
+                        const userData = snapshot.docs[0].data();
+                        const role = userData.role;
+                        currentUserRole = role;
+                        
+                        if (role === 'guru') {
+                            if (userData.guruId) {
+                                const selectedGuru = guruList.find(g => g.id === userData.guruId);
+                                if (selectedGuru) {
+                                    finalizeGuruLogin(selectedGuru);
+                                } else {
+                                    showGuruSelection();
+                                }
+                            } else {
+                                showGuruSelection();
+                            }
+                        } else {
+                            finalizeStudentLogin(user);
+                        }
                     }
-                    
-                    showMainApp();
-                    
                 } catch (error) {
                     console.error('Error signing in with Google:', error);
                     alert('Gagal login dengan Google: ' + error.message);
                 }
+            }
+            
+            function showGuruSelection() {
+                const modal = document.getElementById('guruSelectionModal');
+                const optionsDiv = document.getElementById('guruOptions');
+                optionsDiv.innerHTML = '';
+                
+                guruList.forEach(guru => {
+                    const btn = document.createElement('button');
+                    btn.textContent = guru.name;
+                    btn.className = 'guru-option-btn';
+                    btn.addEventListener('click', async () => {
+                        if (currentUser) {
+                            const snapshot = await collections.users.where('email', '==', currentUser.email).get();
+                            if (!snapshot.empty) {
+                                const docId = snapshot.docs[0].id;
+                                await collections.users.doc(docId).update({
+                                    guruId: guru.id,
+                                    name: guru.name,
+                                    role: 'guru'
+                                });
+                            } else {
+                                await saveUserToFirebase({
+                                    name: guru.name,
+                                    email: currentUser.email,
+                                    role: 'guru',
+                                    guruId: guru.id
+                                });
+                            }
+                            await loadUsersFromFirebase();
+                            finalizeGuruLogin(guru);
+                        }
+                        modal.style.display = 'none';
+                    });
+                    optionsDiv.appendChild(btn);
+                });
+                
+                modal.style.display = 'flex';
+                
+                document.getElementById('closeGuruModal').onclick = () => {
+                    modal.style.display = 'none';
+                    handleLogout();
+                };
+            }
+            
+            function finalizeGuruLogin(guru) {
+                localStorage.setItem('userRole', 'guru');
+                localStorage.setItem('userDisplayName', guru.name);
+                localStorage.setItem('userEmail', currentUser ? currentUser.email : guru.email);
+                localStorage.setItem('selectedGuru', JSON.stringify(guru));
+                
+                userNameDisplay.textContent = guru.name;
+                userEmailDisplay.textContent = currentUser ? currentUser.email : guru.email;
+                userRole.textContent = 'Guru BK';
+                avatarIcon.className = guru.avatar;
+                
+                showMainApp();
+            }
+            
+            function finalizeStudentLogin(user) {
+                localStorage.setItem('userRole', 'siswa');
+                localStorage.setItem('userDisplayName', user.displayName || user.email.split('@')[0]);
+                localStorage.setItem('userEmail', user.email);
+                userNameDisplay.textContent = user.displayName || user.email.split('@')[0];
+                userEmailDisplay.textContent = user.email;
+                userRole.textContent = 'Siswa';
+                avatarIcon.className = 'fas fa-user-graduate';
+                showMainApp();
             }
             
             // ===== PAGE SWITCHING =====
@@ -2201,6 +2360,7 @@
                 localStorage.removeItem('userDisplayName');
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('selectedGuru');
                 localStorage.removeItem(LAST_DETAIL_TITLE_KEY);
                 localStorage.removeItem(LAST_DETAIL_CONTENT_KEY);
                 localStorage.removeItem(JANJIAN_FORM_KEY);
@@ -2241,8 +2401,8 @@
                     contactEl.innerHTML = `
                         <div class="contact-avatar"><i class="${contact.avatar}"></i></div>
                         <div class="contact-info">
-                            <div class="contact-name">${contact.name}</div>
-                            ${contact.email ? `<div class="contact-email">${contact.email}</div>` : ''}
+                            <div class="contact-name">${escapeHtml(contact.name)}</div>
+                            ${contact.email ? `<div class="contact-email">${escapeHtml(contact.email)}</div>` : ''}
                         </div>
                     `;
                   
@@ -2292,7 +2452,7 @@
                     chatMessages.innerHTML = `
                         <div class="empty-chat-message">
                             <i class="fas fa-comments"></i>
-                            <p>Mulai percakapan dengan ${contact ? contact.name : 'kontak'}</p>
+                            <p>Mulai percakapan dengan ${contact ? escapeHtml(contact.name) : 'kontak'}</p>
                         </div>
                     `;
                 } else {
@@ -2304,7 +2464,7 @@
                         const messageDiv = document.createElement('div');
                         messageDiv.className = `message ${msg.type}`;
                         messageDiv.innerHTML = `
-                            <div class="message-text">${msg.text}</div>
+                            <div class="message-text">${escapeHtml(msg.text)}</div>
                             <div class="message-time">${msg.time}</div>
                         `;
                       
@@ -2347,10 +2507,16 @@
             function sendChatMessage() {
                 const message = chatInput.value.trim();
                 if (message === '') return;
+                
+                if (!currentContactId) {
+                    alert('Pilih kontak terlebih dahulu');
+                    return;
+                }
               
                 const now = new Date();
-                const timeString = now.getHours() + ':' + now.getMinutes().toString().padStart(2, '0');
+                const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
               
+                if (!messages[currentContactId]) messages[currentContactId] = [];
                 messages[currentContactId].push({
                     type: 'sent',
                     text: message,
@@ -2497,23 +2663,46 @@
                 savePageState('chat');
                 if (chatSidebar) chatSidebar.classList.remove('hidden');
                 
-                const role = localStorage.getItem('userRole');
-                if (role === 'siswa') {
-                    const pakHeri = contacts.find(c => c.name === 'Pak Heri');
-                    if (pakHeri) {
-                        currentContactId = pakHeri.id;
-                    }
-                } else if (role === 'guru') {
-                    const firstStudent = contacts.find(c => c.isStudent);
-                    if (firstStudent) {
-                        currentContactId = firstStudent.id;
-                    }
+                // Cek apakah data kontak sudah ada
+                if (contacts.length === 0) {
+                    chatMessages.innerHTML = '<div class="empty-chat-message"><i class="fas fa-spinner fa-spin"></i><p>Memuat data kontak...</p></div>';
+                    const checkData = setInterval(() => {
+                        if (contacts.length > 0) {
+                            clearInterval(checkData);
+                            showChatPage();
+                        }
+                    }, 200);
+                    return;
                 }
                 
                 renderContacts();
-                renderMessages();
-                loadChatDraft();
-                if (currentContactId) chatInputArea.style.display = 'flex';
+                
+                // Pilih kontak pertama jika belum ada yang dipilih
+                if (!currentContactId) {
+                    const role = localStorage.getItem('userRole');
+                    let firstContact = null;
+                    if (role === 'guru') {
+                        firstContact = contacts.find(c => c.isStudent);
+                    } else if (role === 'siswa') {
+                        firstContact = contacts.find(c => c.isGuru);
+                    }
+                    
+                    if (firstContact) {
+                        currentContactId = firstContact.id;
+                        const activeContact = document.querySelector(`.chat-contact[data-contact-id="${currentContactId}"]`);
+                        if (activeContact) activeContact.classList.add('active');
+                    }
+                }
+                
+                if (currentContactId) {
+                    renderMessages();
+                    loadChatDraft();
+                    if (chatInputArea) chatInputArea.style.display = 'flex';
+                } else {
+                    if (chatInputArea) chatInputArea.style.display = 'none';
+                    chatMessages.innerHTML = '<div class="empty-chat-message"><i class="fas fa-users-slash"></i><p>Tidak ada kontak tersedia</p></div>';
+                }
+                
                 setTimeout(() => { window.scrollTo({ top: chatScrollY, behavior: 'instant' }); }, 20);
             }
             
@@ -2659,7 +2848,7 @@
             
             // ===== SETUP JANJIAN FORM PERSISTENCE =====
             if (janjianUsername && janjianDate && janjianStartTime && janjianEndTime) {
-                janjianUsername.addEventListener('input', () => {
+                const saveFormToLocal = () => {
                     const formData = {
                         username: janjianUsername.value,
                         date: janjianDate.value,
@@ -2667,34 +2856,11 @@
                         endTime: janjianEndTime.value
                     };
                     localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
-                });
-                janjianDate.addEventListener('input', () => {
-                    const formData = {
-                        username: janjianUsername.value,
-                        date: janjianDate.value,
-                        startTime: janjianStartTime.value,
-                        endTime: janjianEndTime.value
-                    };
-                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
-                });
-                janjianStartTime.addEventListener('input', () => {
-                    const formData = {
-                        username: janjianUsername.value,
-                        date: janjianDate.value,
-                        startTime: janjianStartTime.value,
-                        endTime: janjianEndTime.value
-                    };
-                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
-                });
-                janjianEndTime.addEventListener('input', () => {
-                    const formData = {
-                        username: janjianUsername.value,
-                        date: janjianDate.value,
-                        startTime: janjianStartTime.value,
-                        endTime: janjianEndTime.value
-                    };
-                    localStorage.setItem(JANJIAN_FORM_KEY, JSON.stringify(formData));
-                });
+                };
+                janjianUsername.addEventListener('input', saveFormToLocal);
+                janjianDate.addEventListener('input', saveFormToLocal);
+                janjianStartTime.addEventListener('input', saveFormToLocal);
+                janjianEndTime.addEventListener('input', saveFormToLocal);
             }
             
             if (logoutIcon) logoutIcon.addEventListener('click', handleLogout);
