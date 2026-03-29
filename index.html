@@ -1744,19 +1744,20 @@
             const db = firebase.firestore();
 
             // ===== SYNC FUNCTIONS =====
-            function showSyncIndicator(message) {
+            function showSyncIndicator(message, isError = false) {
                 const existing = document.querySelector('.sync-indicator');
                 if (existing) existing.remove();
                 
                 const indicator = document.createElement('div');
                 indicator.className = 'sync-indicator';
-                indicator.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${message}`;
+                indicator.style.background = isError ? '#dc3545' : '#009688';
+                indicator.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-sync-alt fa-spin'}"></i> ${message}`;
                 document.body.appendChild(indicator);
                 
                 setTimeout(() => {
                     indicator.classList.add('fade-out');
                     setTimeout(() => indicator.remove(), 300);
-                }, 1500);
+                }, 2000);
             }
 
             // ===== DATA COLLECTIONS =====
@@ -1864,6 +1865,7 @@
                     rebuildContacts();
                 } catch (error) {
                     console.error('Error loading users:', error);
+                    showSyncIndicator('Gagal memuat data pengguna', true);
                 }
             }
             
@@ -1908,13 +1910,15 @@
                         }
                     });
                     
-                    if (hasChanges && chatPage.classList.contains('show') && currentContactId) {
-                        renderMessages();
+                    if (hasChanges) {
+                        if (chatPage.classList.contains('show') && currentContactId) {
+                            renderMessages();
+                        }
+                        updateNotificationBadges();
                     }
-                    
-                    updateNotificationBadges();
                 }, (error) => {
                     console.error('Error listening to messages:', error);
+                    showSyncIndicator('Koneksi real-time terputus', true);
                 });
             }
             
@@ -2005,6 +2009,7 @@
                     await loadUsersFromFirebase();
                 } catch (error) {
                     console.error('Error saving user:', error);
+                    showSyncIndicator('Gagal menyimpan data pengguna', true);
                 }
             }
 
@@ -2033,6 +2038,7 @@
                     await loadArticlesFromFirebase();
                 } catch (error) {
                     console.error('Error saving article:', error);
+                    showSyncIndicator('Gagal menyimpan artikel', true);
                 }
             }
 
@@ -2050,6 +2056,7 @@
                     await loadAppointmentsFromFirebase();
                 } catch (error) {
                     console.error('Error saving appointment:', error);
+                    showSyncIndicator('Gagal menyimpan jadwal', true);
                 }
             }
 
@@ -2060,6 +2067,7 @@
                     await loadArticlesFromFirebase();
                 } catch (error) {
                     console.error('Error deleting article:', error);
+                    showSyncIndicator('Gagal menghapus artikel', true);
                 }
             }
 
@@ -2070,6 +2078,7 @@
                     await loadAppointmentsFromFirebase();
                 } catch (error) {
                     console.error('Error deleting appointment:', error);
+                    showSyncIndicator('Gagal menghapus jadwal', true);
                 }
             }
             
@@ -2526,7 +2535,11 @@
                 menu.querySelector('[data-action="copy"]').addEventListener('click', () => {
                     menu.classList.remove('show');
                     const msgText = messages[currentContactId]?.[messageIndex]?.text || '';
-                    navigator.clipboard.writeText(msgText).then(() => alert('Pesan disalin ke clipboard')).catch(() => alert('Gagal menyalin pesan'));
+                    navigator.clipboard.writeText(msgText).then(() => {
+                        showSyncIndicator('Pesan disalin');
+                    }).catch(() => {
+                        alert('Gagal menyalin pesan');
+                    });
                 });
                 
                 menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
@@ -2534,7 +2547,9 @@
                     if (confirm('Hapus pesan ini?')) {
                         messages[currentContactId].splice(messageIndex, 1);
                         renderMessages();
-                        collections.messages.doc(currentContactId).set({ messages: messages[currentContactId] }, { merge: true });
+                        collections.messages.doc(currentContactId).set({ messages: messages[currentContactId] }, { merge: true })
+                            .then(() => showSyncIndicator('Pesan dihapus'))
+                            .catch(err => console.error('Error deleting message:', err));
                     }
                 });
                 
@@ -2608,8 +2623,19 @@
                 const message = chatInput.value.trim();
                 if (message === '') return;
                 
+                if (!currentUser) {
+                    alert('Sesi login Anda telah habis. Silakan login kembali.');
+                    handleLogout();
+                    return;
+                }
+                
                 if (!currentContactId) {
                     alert('Pilih kontak terlebih dahulu');
+                    return;
+                }
+                
+                if (!navigator.onLine) {
+                    alert('Tidak ada koneksi internet. Pesan tidak dapat dikirim.');
                     return;
                 }
               
@@ -2622,7 +2648,9 @@
                     text: message,
                     time: timeString,
                     timestamp: timestamp,
-                    read: false
+                    read: false,
+                    senderId: currentUser.uid,
+                    senderEmail: currentUser.email
                 };
               
                 if (!messages[currentContactId]) messages[currentContactId] = [];
@@ -2632,13 +2660,19 @@
                 if (currentContactId) localStorage.removeItem(CHAT_DRAFT_PREFIX + currentContactId);
                 
                 const messageRef = collections.messages.doc(currentContactId);
+                
                 messageRef.get().then(doc => {
                     const existingMessages = doc.exists ? doc.data().messages || [] : [];
                     existingMessages.push(newMessage);
                     return messageRef.set({ messages: existingMessages }, { merge: true });
-                }).catch(error => {
+                })
+                .then(() => {
+                    console.log('Message sent successfully');
+                    showSyncIndicator('Pesan terkirim');
+                })
+                .catch(error => {
                     console.error('Error sending message:', error);
-                    alert('Gagal mengirim pesan');
+                    showSyncIndicator('Gagal mengirim pesan: ' + (error.message || 'Unknown error'), true);
                     messages[currentContactId].pop();
                     renderMessages();
                 });
